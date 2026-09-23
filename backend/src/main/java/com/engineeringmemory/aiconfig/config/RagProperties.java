@@ -16,7 +16,7 @@ public record RagProperties(
 
 		@Positive @Max(50) @DefaultValue("5") int topK,
 
-		@DecimalMin("0.0") @DecimalMax("1.0") @DefaultValue("0.55") double similarityThreshold,
+		@DecimalMin("0.0") @DecimalMax("1.0") @DefaultValue("0.45") double similarityThreshold,
 
 		@Min(2048) @Max(100000) @DefaultValue("10000") int maxPromptChars,
 

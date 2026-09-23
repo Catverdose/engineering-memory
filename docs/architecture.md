@@ -36,7 +36,7 @@ Browser (vanilla JS)
 질문
   → beginTurn: 대화 행 잠금, USER 메시지 + GENERATING 상태 ASSISTANT 메시지 저장
   → 검색어 = 질문 + 최근 대화(최대 2400자)
-  → 벡터 검색: 후보 top-k×4 → 유사도 0.55 미만 제외 → 문서당 3개 → 최대 5개
+  → 벡터 검색: 후보 top-k×4 → 유사도 0.45 미만 제외 → 문서당 3개 → 최대 5개
   → 근거 없음 → NO_CONTEXT 안내문 저장, 모델 호출 안 함
   → 프롬프트 조립: [System] [Personal Knowledge] [Recent Conversation] [User Question], 전체 10,000자 이하
   → 생성 (SSE·WS는 스트리밍, 일반 HTTP는 한 번에)

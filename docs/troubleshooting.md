@@ -61,7 +61,7 @@ docker compose logs --tail=100 backend
 |---|---|
 | 문서가 READY가 아님 | 지식 목록 상태 |
 | 검색 범위가 너무 좁음 | 범위 초기화 후 재질문 |
-| 유사도가 임계값 0.55 미만 | `local` 프로파일 DEBUG 로그의 `bestSimilarity` |
+| 유사도가 임계값 0.45 미만 | `local` 프로파일 DEBUG 로그의 `bestSimilarity` |
 
 ### `MODEL_BUSY`(503) 또는 `TOO_MANY_REQUESTS`(429)
 

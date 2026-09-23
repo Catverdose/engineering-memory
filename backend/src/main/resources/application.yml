@@ -79,7 +79,7 @@ llm:
 rag:
   top-k: 5
 
-  similarity-threshold: 0.55
+  similarity-threshold: 0.45
   max-prompt-chars: 10000
   max-chunks-per-document: 3
 

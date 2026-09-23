@@ -142,7 +142,7 @@ class ConfigYamlTest {
 		assertThat(defaultOf(base, "ollama.generation-model")).isEqualTo("exaone3.5:7.8b");
 		assertThat(str(base, "ollama.num-ctx")).isEqualTo("32768");
 		assertThat(str(base, "ollama.num-predict")).isEqualTo("1024");
-		assertThat(str(base, "rag.similarity-threshold")).isEqualTo("0.55");
+		assertThat(str(base, "rag.similarity-threshold")).isEqualTo("0.45");
 		assertThat(str(base, "rag.top-k")).isEqualTo("5");
 		assertThat(str(base, "rag.max-prompt-chars")).isEqualTo("10000");
 		assertThat(str(base, "rag.max-chunks-per-document")).isEqualTo("3");
