@@ -1,77 +1,76 @@
 # engineering-memory
-A multi-user personal engineering knowledge assistant built with Spring Boot, Go Gateway, PostgreSQL/pgvector, RAG, and local LLMs.
 
-## Roadmap
+개인 개발 기록(프로젝트 문서, 장애 기록, 기술 결정, 학습 노트, 로그)을 저장하고, 그 기록을 근거로 답하는 RAG 기반 엔지니어링 지식 어시스턴트.
 
-### Phase 1 — Private Knowledge Assistant MVP
-
-* 개인 개발 문서, 로그, 메모, 트러블슈팅, 기술 결정 기록 등록
-* Markdown / TXT / PDF / README 지원
-* Chunking + Embedding + PostgreSQL/pgvector
-* Metadata 기반 검색
-* RAG 기반 질의응답
-* Go Gateway + SSE 스트리밍
-* 단일 사용자 로그인 및 Private Knowledge Base
-* Docker Compose 기반 단일 서버 배포
-
-### Phase 2 — Knowledge Ingestion & Retrieval
-
-* 문서 수정 / 삭제 / 재색인
-* Metadata 자동 추출 및 분류 보조
-* 중복 문서 및 Chunk 관리
-* Query Rewrite / Rerank / Context Builder
-* 프로젝트 / 기술 / 자료 유형 / 기간 기반 검색
-* 유사 장애 및 트러블슈팅 검색
-* 대화나 로그에서 새로운 내용을 `Knowledge Candidate`로 생성하고 사용자 승인 후 저장
-* 답변 근거 및 원본 위치 제공
-
-### Phase 3 — AI Serving & Streaming
-
-* AI Profile / AiConfig 관리
-* Chat / Embedding 모델 설정 분리
-* Ollama / vLLM 지원
-* 모델별 생성 옵션 및 동시성 설정
-* Go Gateway SSE / WebSocket 분리 구현
-* Rate Limit / In-Flight Limit / Timeout / Heartbeat
-* Prometheus 기반 모니터링
-* 스트리밍 및 모델 Serving 성능 비교
-
-### Phase 4 — Knowledge Graph & External Sources
-
-* GraphDB 기반 개발 지식 관계 관리
-* Project / Technology / Issue / Error / Solution / Decision / Experiment 관계 구성
-* Vector Search + Graph Search Hybrid Retrieval
-* 자동 Entity / Relationship 추출
-* Git Repository / GitHub Issue / PR / Commit 연동
-* 코드베이스 분석 결과 및 외부 기술 문서 데이터 소스 추가
-* Knowledge Graph 탐색 및 시각화
-
-### Phase 5 — Multi-user & Multi-turn
-
-* 회원가입 및 사용자별 Knowledge Base
-* 사용자별 Document / Vector / Graph 데이터 격리
-* 사용자별 AI Profile / Rate Limit / Storage 관리
-* Conversation / ChatMessage 기반 멀티턴 대화
-* 대화 Context / Query Rewrite / Conversation Summary
-* Private by Default 기반 선택적 공유
-* `PRIVATE / SHARED / PUBLIC` 접근 정책 확장
-
-### Core Direction
+- 대상: 자기 개발 기록을 다시 찾아 쓰려는 개발자, 이 저장소를 개발·운영하는 사람
+- 기능: 문서 등록·자동 색인, 범위(프로젝트·기술·유형·기간) 지정 검색, 근거 문서가 붙는 멀티턴 대화
+- 비대상: 범용 챗봇. 등록한 자료에서 근거를 못 찾으면 모델을 부르지 않고 `NO_CONTEXT`로 답함
+- 계정: 관리자가 발급한 owner 계정만 있음. 회원가입 없음
+- 상태: Phase 1 완료. 다음은 Phase 2 (검색 품질 개선) — [로드맵](docs/roadmap.md)
 
 ```text
-Capture
-  ↓
-Ingestion
-  ↓
-Knowledge Base
-  ↓
-Retrieval
-  ↓
-AI Assistant
-  ↓
-New Knowledge
-  ↓
-Capture
+Browser → nginx(:80) → Go gateway(:8000) → Spring Boot(:8080) → PostgreSQL+pgvector / Ollama
 ```
 
-사용할수록 개인의 개발 경험과 기술 지식이 지속적으로 축적되고 다시 활용되는 Engineering Knowledge Assistant를 목표로 한다.
+## Quick start
+
+요구사항: Docker Compose, NVIDIA GPU + NVIDIA Container Toolkit(Ollama 컨테이너가 GPU를 예약함), 80번 포트, 모델용 디스크 약 6GB
+
+```bash
+cp .env.example .env        # DB_PASSWORD, ADMIN_PASSWORD 값 채울 것
+docker compose up -d --build
+docker compose exec ollama ollama pull bge-m3
+docker compose exec ollama ollama pull exaone3.5:7.8b
+```
+
+### 정상 동작 확인
+
+```bash
+curl -fsS http://localhost/readyz
+# expected: {"backend":"UP","status":"UP"}
+```
+
+`UP`이면 http://localhost 에 접속해 `ADMIN_USERNAME` / `ADMIN_PASSWORD`로 로그인. 로컬 개발, 목 서버, 첫 질문까지의 확인 절차는 [Quickstart](docs/quickstart.md)에 있음.
+
+## 문서 지도
+
+| 목적 | 문서 |
+|---|---|
+| 처음 실행, 로컬 개발 | [docs/quickstart.md](docs/quickstart.md) |
+| 구조, 처리 흐름, 설계 결정 | [docs/architecture.md](docs/architecture.md) |
+| 기능별 코드 위치 | [docs/codemap.md](docs/codemap.md) |
+| HTTP·SSE·WebSocket API, 오류 코드 | [docs/reference/api.md](docs/reference/api.md) |
+| 환경변수, 설정값 | [docs/reference/configuration.md](docs/reference/configuration.md) |
+| 장애 해결, 주의할 동작 | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| RAG 기준 설정과 확인 사항 | [docs/Phase 1 Baseline 및 확인 사항.md](<docs/Phase 1 Baseline 및 확인 사항.md>) |
+| 로드맵 | [docs/roadmap.md](docs/roadmap.md) |
+
+## Compatibility
+
+| 구성 | 버전 |
+|---|---|
+| Java / Spring Boot / Gradle | 21 / 4.1.1 / 9.7.1 (wrapper) |
+| Go | 1.22+ (Docker 빌드는 1.24) |
+| PostgreSQL / pgvector | 17 (`pgvector/pgvector:pg17`) |
+| nginx | 1.27 |
+| 임베딩 모델 | `bge-m3` (1024차원, DB `vector(1024)`와 일치해야 함) |
+| 생성 모델 | `exaone3.5:7.8b` |
+
+## 테스트
+
+```bash
+cd backend && ./gradlew test               # 단위 테스트
+cd backend && ./gradlew integrationTest    # docker compose의 postgres·ollama가 떠 있어야 함
+cd gateway && go test ./...
+```
+
+## Status
+
+**Phase 1 완료** (2026-09-23)
+
+- 확인: backend 단위·통합 테스트, gateway 테스트 전부 통과. Docker Compose 전체 기동 후 `/readyz` UP
+- 선반영: 문서 수정·재색인, 범위 검색, 근거·원본 제공(Phase 2), SSE/WebSocket 분리(Phase 3), 멀티턴 대화(Phase 5)
+- 남은 과제: Ollama 모델 자동 pull, 스키마 마이그레이션 도구, Prometheus 수집 엔드포인트
+- 다음: Phase 2 — [Phase 1 Baseline](<docs/Phase 1 Baseline 및 확인 사항.md>) 기준으로 청크·임계값·Top-K 등을 하나씩 비교
+
+라이선스 [MIT](LICENSE).

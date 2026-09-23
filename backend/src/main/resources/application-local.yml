@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    com.engineeringmemory: DEBUG
+
+rate-limit:
+  chat:
+    capacity: 60
+    refill-period: 2s
