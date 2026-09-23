@@ -340,7 +340,7 @@ function renderDocuments(items) {
           el('span', { text: `v${document.version ?? 1}` }),
         ]),
       ]),
-      el('span', { class: `index-status index-status--${status.toLowerCase()}`, text: statusLabel(status) }),
+      el('span', { class: `index-status index-status--${status.toLowerCase()}`, text: statusLabel(status, needsReindex) }),
       actions,
     ]));
   }

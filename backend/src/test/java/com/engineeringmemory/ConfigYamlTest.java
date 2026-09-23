@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,10 @@ class ConfigYamlTest {
 	private static final String BASE = "application.yml";
 	private static final String LOCAL = "application-local.yml";
 	private static final String PROD = "application-prod.yml";
+	private static final String DOCKER = "application-docker.yml";
+	private static final List<String> PROFILES = List.of(LOCAL, PROD, DOCKER);
+
+	private static final Pattern ENV_PLACEHOLDER = Pattern.compile("^\\$\\{[A-Z0-9_]+:(.*)}$");
 
 	private static Map<String, Object> load(String name) {
 		try {
@@ -45,12 +51,19 @@ class ConfigYamlTest {
 		return String.valueOf(v);
 	}
 
+	private static String defaultOf(Map<String, Object> props, String key) {
+		String raw = str(props, key);
+		Matcher placeholder = ENV_PLACEHOLDER.matcher(raw);
+		return placeholder.matches() ? placeholder.group(1) : raw;
+	}
+
 	@Test
-	@DisplayName("설정 YAML 세 장이 모두 파싱된다")
-	void allThreeProfilesParse() {
+	@DisplayName("설정 YAML 네 장이 모두 파싱된다")
+	void allProfilesParse() {
 		assertThat(load(BASE)).isNotEmpty();
-		assertThat(load(LOCAL)).isNotEmpty();
-		assertThat(load(PROD)).isNotEmpty();
+		for (String profile : PROFILES) {
+			assertThat(load(profile)).as(profile).isNotEmpty();
+		}
 	}
 
 	private static final java.util.Set<String> PROFILE_ONLY_KEYS = java.util.Set.of(
@@ -65,7 +78,7 @@ class ConfigYamlTest {
 	void profileKeysAllExistInBase() {
 		Map<String, Object> base = load(BASE);
 
-		for (String name : List.of(LOCAL, PROD)) {
+		for (String name : PROFILES) {
 			var orphans = new TreeSet<String>();
 			for (String key : load(name).keySet()) {
 				if (!base.containsKey(key) && !PROFILE_ONLY_KEYS.contains(key)) {
@@ -84,8 +97,9 @@ class ConfigYamlTest {
 	void allowListHasNoStaleEntries() {
 		Map<String, Object> base = load(BASE);
 		var profileKeys = new TreeSet<String>();
-		profileKeys.addAll(load(LOCAL).keySet());
-		profileKeys.addAll(load(PROD).keySet());
+		for (String profile : PROFILES) {
+			profileKeys.addAll(load(profile).keySet());
+		}
 
 		for (String allowed : PROFILE_ONLY_KEYS) {
 			assertThat(base).as("%s 는 이제 base 에 있다. 허용 목록에서 빼야 한다", allowed)
@@ -114,9 +128,9 @@ class ConfigYamlTest {
 	}
 
 	@Test
-	@DisplayName("임베딩 차원은 DB 의 vector(N) 과 같은 1024 다")
+	@DisplayName("임베딩 차원 기본값은 DB 의 vector(N) 과 같은 1024 다")
 	void embeddingDimensionsMatchSchema() {
-		assertThat(str(load(BASE), "ollama.embedding-dimensions")).isEqualTo("1024");
+		assertThat(defaultOf(load(BASE), "ollama.embedding-dimensions")).isEqualTo("1024");
 	}
 
 	@Test
@@ -124,8 +138,8 @@ class ConfigYamlTest {
 	void ragValuesSurvivedTheConversion() {
 		Map<String, Object> base = load(BASE);
 
-		assertThat(str(base, "ollama.embedding-model")).isEqualTo("bge-m3");
-		assertThat(str(base, "ollama.generation-model")).isEqualTo("exaone3.5:7.8b");
+		assertThat(defaultOf(base, "ollama.embedding-model")).isEqualTo("bge-m3");
+		assertThat(defaultOf(base, "ollama.generation-model")).isEqualTo("exaone3.5:7.8b");
 		assertThat(str(base, "ollama.num-ctx")).isEqualTo("32768");
 		assertThat(str(base, "ollama.num-predict")).isEqualTo("1024");
 		assertThat(str(base, "rag.similarity-threshold")).isEqualTo("0.55");
@@ -174,12 +188,23 @@ class ConfigYamlTest {
 	}
 
 	@Test
-	@DisplayName("prod 는 프록시 헤더를 신뢰하고 secure 쿠키를 켠다")
+	@DisplayName("prod 는 secure 쿠키를 켠다")
 	void prodHardensForHttps() {
-		Map<String, Object> prod = load(PROD);
+		assertThat(str(load(PROD), "server.servlet.session.cookie.secure")).isEqualTo("true");
+	}
 
-		assertThat(str(prod, "server.forward-headers-strategy")).isEqualTo("framework");
-		assertThat(str(prod, "server.servlet.session.cookie.secure")).isEqualTo("true");
+	@Test
+	@DisplayName("docker 는 nginx·gateway 뒤에서 도므로 프록시 헤더를 신뢰한다")
+	void dockerTrustsProxyHeaders() {
+		assertThat(str(load(DOCKER), "server.forward-headers-strategy")).isEqualTo("framework");
+	}
+
+	@Test
+	@DisplayName("프록시 헤더 신뢰는 docker 에만 있다. 프록시 없이 뜨는 프로파일에서 켜면 IP 위조가 가능하다")
+	void onlyDockerTrustsProxyHeaders() {
+		assertThat(load(BASE)).doesNotContainKey("server.forward-headers-strategy");
+		assertThat(load(LOCAL)).doesNotContainKey("server.forward-headers-strategy");
+		assertThat(load(PROD)).doesNotContainKey("server.forward-headers-strategy");
 	}
 
 	@Test

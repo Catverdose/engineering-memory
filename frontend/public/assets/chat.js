@@ -9,6 +9,8 @@ import {
 
 const MAX_LENGTH = 1000;
 const FALLBACK_TYPES = [
+  ['DOCUMENT', '일반 문서'],
+  ['PROJECT', '프로젝트 자료'],
   ['TROUBLESHOOTING', '장애·트러블슈팅'],
   ['TECH_DOC', '기술 문서'],
   ['PROJECT_DOC', '프로젝트 문서'],
@@ -16,6 +18,7 @@ const FALLBACK_TYPES = [
   ['RETROSPECTIVE', '회고'],
   ['EXPERIMENT', '실험·측정 결과'],
   ['DECISION', '기술 선택 근거'],
+  ['LOG', '로그'],
   ['OTHER', '기타'],
 ];
 
