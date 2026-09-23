@@ -1,0 +1,117 @@
+:root {
+
+  --c-primary: #171717;
+  --c-on-primary: #ffffff;
+  --c-ink: #171717;
+  --c-body: #4d4d4d;
+  --c-mute: #666666;
+  --c-faint: #707070;
+
+  --c-hairline: #ebebeb;
+  --c-hairline-soft: #f2f2f2;
+
+  --c-canvas: #fafafa;
+  --c-elevated: #ffffff;
+
+  --c-link: #0070f3;
+  --c-link-deep: #0761d1;
+  --c-link-soft: #d3e5ff;
+
+  --c-error: #ee0000;
+  --c-error-deep: #c50000;
+  --c-warning: #f5a623;
+  --c-warning-soft: #ffefcf;
+  --c-warning-deep: #ab570a;
+
+  --c-violet: #7928ca;
+  --c-violet-soft: #d8ccf1;
+  --c-cyan: #50e3c2;
+  --c-cyan-soft: #aaffec;
+  --c-pink: #ff0080;
+  --c-magenta: #eb367f;
+
+  --g-develop-start: #007cf0;
+  --g-develop-end: #00dfd8;
+  --g-preview-start: #7928ca;
+  --g-preview-end: #ff0080;
+  --g-ship-start: #ff4d4d;
+  --g-ship-end: #f9cb28;
+
+  --f-sans: Geist, Inter, Arial, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  --f-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --t-display-size: 48px;
+  --t-display-line: 48px;
+  --t-display-track: -2.4px;
+
+  --t-h1-size: 32px;
+  --t-h1-line: 40px;
+  --t-h1-track: -1.28px;
+
+  --t-h2-size: 20px;
+  --t-h2-line: 28px;
+  --t-h2-track: -0.4px;
+
+  --t-label-size: 14px;
+  --t-label-line: 20px;
+  --t-label-track: -0.28px;
+
+  --t-eyebrow-size: 12px;
+  --t-eyebrow-line: 16px;
+
+  --t-body-lg-size: 16px;
+  --t-body-lg-line: 24px;
+
+  --t-body-size: 14px;
+  --t-body-line: 20px;
+
+  --t-body-sm-size: 12px;
+  --t-body-sm-line: 16px;
+
+  --t-button-lg-size: 16px;
+  --t-button-lg-line: 20px;
+
+  --t-button-md-size: 14px;
+  --t-button-md-line: 20px;
+
+  --t-code-size: 14px;
+  --t-code-line: 20px;
+
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+
+  --r-none: 0px;
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill-category: 64px;
+  --r-pill: 100px;
+  --r-full: 9999px;
+
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 16px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-2xl: 40px;
+  --s-3xl: 64px;
+  --s-4xl: 96px;
+  --s-section: 128px;
+
+  --e-whisper: 0 1px 1px rgba(0, 0, 0, 0.04);
+  --e-float: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+
+  --c-ink-hover: #2a2a2a;
+
+  --c-error-soft: color-mix(in srgb, var(--c-error) 8%, var(--c-elevated));
+  --c-error-line: color-mix(in srgb, var(--c-error) 24%, var(--c-elevated));
+
+  --container: 1200px;
+  --container-narrow: 768px;
+
+  --touch: 44px;
+
+  --nav-height: 69px;
+}

@@ -1,0 +1,11 @@
+server:
+  forward-headers-strategy: framework
+
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+logging:
+  level:
+    com.engineeringmemory: INFO

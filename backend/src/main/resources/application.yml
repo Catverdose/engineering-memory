@@ -1,0 +1,127 @@
+spring:
+  application:
+    name: personal-engineering-assistant
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/engineering_assistant
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jdbc:
+    template:
+      query-timeout: 10s
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+server:
+  port: 8080
+
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+ollama:
+  base-url: http://localhost:11434
+  embedding-model: bge-m3
+  generation-model: exaone3.5:7.8b
+
+  embedding-dimensions: 1024
+
+  temperature: 0.2
+
+  num-ctx: 32768
+  num-predict: 1024
+
+  connect-timeout: 5s
+  read-timeout: 180s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+llm:
+  provider: OLLAMA
+
+  observability:
+    queue-warn-threshold: 2s
+    summary-interval: 60s
+
+rag:
+  top-k: 5
+
+  similarity-threshold: 0.55
+  max-prompt-chars: 10000
+  max-chunks-per-document: 3
+
+knowledge:
+  indexing:
+    max-file-bytes: 20971520
+    max-pdf-pages: 500
+    max-extracted-chars: 2000000
+    chunk-size-chars: 1200
+    chunk-overlap-chars: 150
+    max-chunks: 2500
+    embedding-batch-size: 32
+    max-concurrent-indexing: 2
+
+chat:
+  stream:
+    timeout: 300s
+
+  websocket:
+    enabled: true
+    path: /api/chat/ws
+
+    allowed-origins: []
+
+    max-message-bytes: 8192
+
+    idle-timeout: 600s
+
+  model:
+    max-in-flight: 50
+
+    background-yield-timeout: 30s
+
+rate-limit:
+  chat:
+    enabled: true
+    capacity: 10
+    refill-period: 6s
+    max-clients: 10000
+  login:
+    enabled: true
+    capacity: 5
+    refill-period: 60s
+    max-clients: 10000
+
+admin:
+  account:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:}
+
+logging:
+  level:
+    com.engineeringmemory: INFO
+  pattern:
+    level: "%5p [request_id=%X{request_id:-}]"

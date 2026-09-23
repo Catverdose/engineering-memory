@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 지식 · Personal Engineering Assistant</title>
+  <meta name="description" content="개인 엔지니어링 문서 등록과 검색 상태 관리">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="api-base" content="">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="./assets/tokens.css">
+  <link rel="stylesheet" href="./assets/app.css">
+  <link rel="stylesheet" href="./assets/knowledge.css">
+</head>
+<body>
+  <div class="page">
+    <header class="nav-bar">
+      <div class="nav-bar__inner">
+        <a class="nav-bar__brand" href="./index.html">Engineering Assistant</a>
+        <span class="nav-bar__spacer"></span>
+        <a class="nav-link" href="./index.html">대화</a>
+        <span id="who" class="t-body-sm t-mute"></span>
+        <button type="button" id="btn-logout" class="btn btn-ghost-sm hidden">로그아웃</button>
+      </div>
+    </header>
+
+    <main class="knowledge container">
+      <section id="auth-required" class="auth-required hidden">
+        <p class="t-eyebrow">PRIVATE KNOWLEDGE</p>
+        <h1 class="t-h1">로그인이 필요합니다</h1>
+        <p class="t-body-lg t-mute">개인 문서와 검색 데이터는 로그인한 사용자만 볼 수 있습니다.</p>
+        <a class="btn btn-primary-sm" href="./index.html?next=knowledge">로그인하러 가기</a>
+      </section>
+
+      <section id="knowledge-app" class="stack stack-xl hidden">
+        <header class="knowledge-hero">
+          <div>
+            <p class="t-eyebrow">CONTINUOUS KNOWLEDGE BASE</p>
+            <h1 class="t-display">내 지식</h1>
+            <p class="knowledge-hero__lede">문서와 경험을 등록하면 검색 가능한 조각으로 색인합니다.</p>
+          </div>
+          <button type="button" id="toggle-create" class="btn btn-primary-sm">자료 등록</button>
+        </header>
+
+        <div id="flash" aria-live="polite"></div>
+
+        <section id="create-panel" class="card card-lg hidden" aria-labelledby="create-title">
+          <div class="panel-head">
+            <div>
+              <p class="t-eyebrow">ADD KNOWLEDGE</p>
+              <h2 id="create-title" class="t-h2">자료 등록</h2>
+            </div>
+            <button type="button" id="close-create" class="btn btn-ghost-sm">닫기</button>
+          </div>
+
+          <form id="document-form" class="stack stack-lg">
+            <fieldset id="source-mode-switch" class="mode-switch">
+              <legend class="sr-only">등록 방식</legend>
+              <label><input type="radio" name="source-mode" value="text" checked> 텍스트 붙여넣기</label>
+              <label><input type="radio" name="source-mode" value="file"> 파일 업로드</label>
+            </fieldset>
+
+            <div class="form-grid">
+              <div class="field form-grid__full">
+                <label class="field__label" for="doc-title">제목</label>
+                <input class="input" id="doc-title" maxlength="300" required placeholder="예: Nginx SSE buffering 해결 기록">
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-type">자료 유형</label>
+                <select class="select" id="doc-type" required></select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-date">자료 발생일</label>
+                <input class="input" id="doc-date" type="date">
+                <span class="field__hint">업로드한 날이 아니라 장애·실험·작성 시점입니다.</span>
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-projects">프로젝트</label>
+                <input class="input" id="doc-projects" list="project-options" placeholder="UBot, PetCoupon">
+                <datalist id="project-options"></datalist>
+                <span class="field__hint">여러 값은 쉼표로 구분합니다.</span>
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-technologies">기술</label>
+                <input class="input" id="doc-technologies" list="technology-options" placeholder="Spring, Nginx, SSE">
+                <datalist id="technology-options"></datalist>
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-tags">태그</label>
+                <input class="input" id="doc-tags" list="tag-options" placeholder="buffering, deploy">
+                <datalist id="tag-options"></datalist>
+              </div>
+              <div class="field">
+                <label class="field__label" for="doc-source-uri">원본 위치</label>
+                <input class="input" id="doc-source-uri" type="url" placeholder="https://github.com/...">
+              </div>
+              <div id="text-source" class="field form-grid__full">
+                <label class="field__label" for="doc-content">내용</label>
+                <textarea class="textarea knowledge-content" id="doc-content" rows="12" placeholder="Markdown, 에러 로그, 기술 메모를 붙여넣으세요."></textarea>
+              </div>
+              <div id="file-source" class="field form-grid__full hidden">
+                <label class="field__label" for="doc-file">파일</label>
+                <input class="file-input" id="doc-file" type="file" accept=".txt,.md,.markdown,.log,.pdf,text/plain,text/markdown,application/pdf,application/octet-stream">
+                <span class="field__hint">README, TXT, Markdown, LOG, PDF · 파일당 최대 20MB</span>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" id="cancel-create" class="btn btn-ghost-sm">취소</button>
+              <button type="submit" id="submit-document" class="btn btn-primary-sm">저장하고 색인</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="stack stack-md" aria-labelledby="list-title">
+          <div class="panel-head">
+            <div class="row row-wrap">
+              <h2 id="list-title" class="t-h2">등록된 자료</h2>
+              <span id="document-total" class="t-eyebrow"></span>
+            </div>
+            <button type="button" id="refresh-documents" class="btn btn-ghost-sm">새로고침</button>
+          </div>
+
+          <form id="filter-form" class="knowledge-filters">
+            <div class="field knowledge-filters__search">
+              <label class="sr-only" for="filter-q">제목과 내용 검색</label>
+              <input class="input" id="filter-q" type="search" placeholder="제목과 내용 검색">
+            </div>
+            <select class="select" id="filter-type" aria-label="자료 유형"><option value="">모든 유형</option></select>
+            <select class="select" id="filter-project" aria-label="프로젝트"><option value="">모든 프로젝트</option></select>
+            <select class="select" id="filter-technology" aria-label="기술"><option value="">모든 기술</option></select>
+            <select class="select" id="filter-status" aria-label="색인 상태">
+              <option value="">모든 상태</option>
+              <option value="READY">검색 가능</option>
+              <option value="PENDING">색인 대기</option>
+              <option value="FAILED">색인 실패</option>
+            </select>
+            <button type="submit" class="btn btn-primary-sm">적용</button>
+            <button type="button" id="clear-filters" class="btn btn-ghost-sm">초기화</button>
+          </form>
+
+          <div id="document-list" class="document-list"></div>
+          <div id="document-empty" class="empty-state hidden">
+            <p class="t-h2">아직 등록된 자료가 없습니다</p>
+            <p class="t-mute">첫 문서를 등록하면 대화에서 바로 근거로 활용할 수 있습니다.</p>
+            <button type="button" id="empty-create" class="btn btn-primary-sm">첫 자료 등록</button>
+          </div>
+          <div id="document-pager" class="pager"></div>
+        </section>
+
+        <section id="detail-panel" class="card card-lg document-detail hidden" aria-labelledby="detail-title">
+          <div class="panel-head">
+            <div>
+              <p class="t-eyebrow">DOCUMENT DETAIL</p>
+              <h2 id="detail-title" class="t-h2"></h2>
+            </div>
+            <button type="button" id="close-detail" class="btn btn-ghost-sm">닫기</button>
+          </div>
+          <div id="detail-meta" class="document-detail__meta"></div>
+          <pre id="detail-content" class="document-detail__content"></pre>
+          <div id="detail-actions" class="form-actions"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner container">
+        <span class="t-body-sm t-mute">원본 문서와 검색 데이터는 사용자별로 격리됩니다.</span>
+        <span class="t-eyebrow">PRIVATE BY DEFAULT</span>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="./assets/knowledge.js"></script>
+</body>
+</html>
