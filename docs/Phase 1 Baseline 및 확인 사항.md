@@ -20,7 +20,7 @@ Knowledge 등록
 * Chunk Size: `1200 chars`
 * Chunk Overlap: `150 chars`
 * Top-K: `5`
-* Similarity Threshold: `0.55` //근데 이렇게 하면 아무것도 못찾음 확인 필요함 지금은 0.0임 0.3도 근거문서가 2개임 0.4도 그럼 근데 일단 내용이 두개 다 포함됨, 근데 문서 두개가 내용이 비슷해서 더 확인해봐야할듯. 0.5의 경우 유의미함 일단 단어를 비슷하게 주면 찾음 못찾기도 하는데 영어랑 한국어가 의미가 같아도 다른 단어로 인식하는듯
+* Similarity Threshold: `0.45` (기존 `0.55`) //근데 이렇게 하면 아무것도 못찾음 확인 필요함 지금은 0.0임 0.3도 근거문서가 2개임 0.4도 그럼 근데 일단 내용이 두개 다 포함됨, 근데 문서 두개가 내용이 비슷해서 더 확인해봐야할듯. 0.5의 경우 유의미함 일단 단어를 비슷하게 주면 찾음 못찾기도 하는데 영어랑 한국어가 의미가 같아도 다른 단어로 인식하는듯
 * Vector Search: Exact Scan
 * Vector DB: PostgreSQL + pgvector
 
@@ -120,7 +120,7 @@ DB 스키마는 애플리케이션이 자동 수정하지 않는다.
 특히:
 
 ```text
-similarity-threshold = 0.55
+similarity-threshold = 0.45
 chunk-size = 1200
 chunk-overlap = 150
 top-k = 5

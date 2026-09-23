@@ -34,7 +34,7 @@
 | 키 | 기본값 | 설명 |
 |---|---|---|
 | `rag.top-k` | 5 | 프롬프트 근거 최대 청크 수 |
-| `rag.similarity-threshold` | 0.55 | 이 값 미만 유사도는 버림 |
+| `rag.similarity-threshold` | 0.45 | 이 값 미만 유사도는 버림 |
 | `rag.max-prompt-chars` | 10000 | 프롬프트 전체 글자 상한 |
 | `rag.max-chunks-per-document` | 3 | 문서 하나에서 가져올 최대 청크 |
 | `knowledge.indexing.chunk-size-chars` | 1200 | 청크 크기 |
