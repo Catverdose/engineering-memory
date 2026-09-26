@@ -146,8 +146,8 @@ services:
       - ./infra/nginx/forwarded.inc:/etc/nginx/conf.d/forwarded.inc:ro
       - ./frontend/public:/usr/share/nginx/html:ro
 
-    ports:
-      - "80:80"
+    expose:
+      - "80"
 
     depends_on:
       gateway:
@@ -183,8 +183,28 @@ services:
 
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+    depends_on:
+      nginx:
+        condition: service_started
+
+    restart: unless-stopped
 
 volumes:
   pgdata:
   ollama:
   prometheus:
+  caddy_data:
+  caddy_config:

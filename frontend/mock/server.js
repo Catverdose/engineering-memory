@@ -4,6 +4,7 @@ const path = require('node:path');
 const ws = require('./ws.js');
 
 const ROOT = path.join(__dirname, '..', 'public');
+const KNOWLEDGE_SEED = require('../../seed/project-knowledge.json');
 const PORT = Number(process.env.PORT || process.argv[2] || 5173);
 const CSRF = 'mock-csrf-token';
 
@@ -23,43 +24,28 @@ const TYPE_LABELS = {
 };
 
 let loggedIn = false;
-let nextDocumentId = 4;
-let nextConversationId = 2;
-
-const documents = [
-  {
-    id: 1, title: 'Nginx SSE buffering 해결 기록', documentType: 'TROUBLESHOOTING',
-    documentTypeLabel: TYPE_LABELS.TROUBLESHOOTING, projects: ['UBot'], technologies: ['NGINX', 'SSE'],
-    tags: ['buffering', 'streaming'], sourceName: 'nginx-sse.md', sourceUri: null, mediaType: 'text/markdown',
-    occurredOn: '2026-09-12', content: '증상: SSE 응답이 한꺼번에 도착했다.\n\n해결: proxy_buffering off와 X-Accel-Buffering: no를 함께 적용했다.',
-    version: 2, indexingStatus: 'READY', createdAt: '2026-09-12T10:00:00+09:00', updatedAt: '2026-09-20T12:00:00+09:00',
-  },
-  {
-    id: 2, title: 'PetCoupon Redis Lua 적용 결정', documentType: 'DECISION',
-    documentTypeLabel: TYPE_LABELS.DECISION, projects: ['PetCoupon'], technologies: ['REDIS', 'LUA'],
-    tags: ['atomicity', 'coupon'], sourceName: null, sourceUri: 'https://example.test/petcoupon/decision', mediaType: 'text/plain',
-    occurredOn: '2026-08-03', content: '쿠폰 수량 확인과 차감을 원자적으로 처리하기 위해 Redis Lua를 사용했다.',
-    version: 1, indexingStatus: 'READY', createdAt: '2026-08-03T09:00:00+09:00', updatedAt: '2026-08-03T09:00:00+09:00',
-  },
-  {
-    id: 3, title: 'AWS 배포 실패 메모', documentType: 'TROUBLESHOOTING',
-    documentTypeLabel: TYPE_LABELS.TROUBLESHOOTING, projects: ['Engineering Assistant'], technologies: ['AWS', 'DOCKER'],
-    tags: ['deploy'], sourceName: 'aws-deploy.log', sourceUri: null, mediaType: 'text/plain',
-    occurredOn: '2026-09-21', content: '컨테이너 환경 변수 누락으로 readiness probe가 실패했다.',
-    version: 1, indexingStatus: 'FAILED', createdAt: '2026-09-21T21:00:00+09:00', updatedAt: '2026-09-21T21:00:00+09:00',
-  },
-];
-
-const conversations = [{
-  id: 1,
-  title: 'Nginx SSE 문제',
-  createdAt: '2026-09-22T08:00:00+09:00',
-  updatedAt: '2026-09-22T08:02:00+09:00',
-  messages: [
-    { role: 'USER', content: 'Nginx SSE buffering 문제를 어떻게 해결했지?' },
-    { role: 'ASSISTANT', content: '기록에 따르면 Nginx의 proxy_buffering을 끄고 X-Accel-Buffering: no 헤더를 함께 적용했습니다.', sources: sourceHits([documents[0]]) },
-  ],
-}];
+const seededAt = new Date().toISOString();
+const documents = KNOWLEDGE_SEED.documents.map((entry, index) => ({
+  id: index + 1,
+  title: entry.title,
+  documentType: entry.documentType,
+  documentTypeLabel: TYPE_LABELS[entry.documentType],
+  projects: entry.projects,
+  technologies: entry.technologies,
+  tags: entry.tags,
+  sourceName: null,
+  sourceUri: entry.sourceUri,
+  mediaType: 'text/plain',
+  occurredOn: entry.occurredOn,
+  content: `${entry.content.trim()}\n\n출처: ${entry.sourcePath || entry.sourceUri}`,
+  version: 1,
+  indexingStatus: 'READY',
+  createdAt: seededAt,
+  updatedAt: seededAt,
+}));
+let nextDocumentId = documents.length + 1;
+let nextConversationId = 1;
+const conversations = [];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -249,9 +235,7 @@ async function runScenario(body, channel) {
     return;
   }
 
-  const answer = message.includes('Redis')
-    ? '기록에 따르면 쿠폰 수량 확인과 차감을 한 번에 처리해 동시성 오류를 막기 위해 Redis Lua를 사용했습니다.'
-    : '저장된 기록에서는 Nginx의 proxy_buffering을 끄고 응답에 X-Accel-Buffering: no를 추가해 SSE 지연을 해결했습니다.';
+  const answer = `목 서버의 예시 응답입니다. 선택된 자료: ${sources.map((source) => source.title).join(', ')}. 실제 근거 검색과 답변은 백엔드에서 확인해 주세요.`;
   const pieces = answer.match(/.{1,7}/gu) || [];
   for (let index = 0; index < pieces.length; index++) {
     if (message.includes('!cut') && index === 5) return channel.destroy();
