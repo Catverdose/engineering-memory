@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.engineeringmemory.chat.enums.ChatStatus;
-import com.engineeringmemory.common.exception.ErrorCode;
 import com.engineeringmemory.streaming.config.StreamProperties;
 import com.engineeringmemory.streaming.dto.StreamEvent;
 import com.engineeringmemory.streaming.support.StreamEmitterFactory;

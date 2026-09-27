@@ -5,6 +5,7 @@ const ws = require('./ws.js');
 
 const ROOT = path.join(__dirname, '..', 'public');
 const KNOWLEDGE_SEED = require('../../seed/project-knowledge.json');
+const REFERENCE_SEED = require('../../backend/src/main/resources/knowledge/reference-knowledge.json');
 const PORT = Number(process.env.PORT || process.argv[2] || 5173);
 const CSRF = 'mock-csrf-token';
 
@@ -25,8 +26,13 @@ const TYPE_LABELS = {
 
 let loggedIn = false;
 const seededAt = new Date().toISOString();
-const documents = KNOWLEDGE_SEED.documents.map((entry, index) => ({
+const seeded = [
+  ...KNOWLEDGE_SEED.documents.map((entry) => ({ entry, shared: false })),
+  ...REFERENCE_SEED.documents.map((entry) => ({ entry, shared: true })),
+];
+const documents = seeded.map(({ entry, shared }, index) => ({
   id: index + 1,
+  shared,
   title: entry.title,
   documentType: entry.documentType,
   documentTypeLabel: TYPE_LABELS[entry.documentType],
@@ -64,6 +70,7 @@ function sourceHits(items) {
     heading: index === 0 ? '핵심 기록' : null,
     similarity: 0.84 - index * 0.07,
     snippet: document.content.replace(/\s+/g, ' ').slice(0, 200),
+    shared: Boolean(document.shared),
   }));
 }
 
@@ -219,7 +226,7 @@ async function runScenario(body, channel) {
   channel.send('meta', {
     requestId,
     conversationId: conversation.id,
-    scope: { ...(body.scope || {}), description: describeScope(body.scope) },
+    scope: describeScope(body.scope),
     sources,
     model: sources.length ? 'exaone3.5:7.8b' : null,
   });
@@ -289,7 +296,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/knowledge/documents' && req.method === 'GET') {
-    let result = [...documents].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    const ownership = url.searchParams.get('ownership') || 'MINE';
+    let result = documents
+      .filter((document) => ownership === 'ALL' || (ownership === 'SHARED') === Boolean(document.shared))
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
     const q = (url.searchParams.get('q') || '').toLowerCase();
     if (q) result = result.filter((document) => `${document.title} ${document.content}`.toLowerCase().includes(q));
     for (const [key, field, array] of [
@@ -308,7 +318,7 @@ const server = http.createServer(async (req, res) => {
     const { metadata, fileName } = await readDocumentPayload(req);
     const now = new Date().toISOString();
     const document = {
-      id: nextDocumentId++, title: metadata.title, documentType: metadata.documentType,
+      id: nextDocumentId++, shared: false, title: metadata.title, documentType: metadata.documentType,
       documentTypeLabel: TYPE_LABELS[metadata.documentType] || metadata.documentType,
       projects: metadata.projects || [], technologies: metadata.technologies || [], tags: metadata.tags || [],
       sourceName: fileName, sourceUri: metadata.sourceUri || null,
@@ -324,7 +334,7 @@ const server = http.createServer(async (req, res) => {
   let match = pathname.match(/^\/api\/knowledge\/documents\/(\d+)\/reindex$/);
   if (match && req.method === 'POST') {
     if (!requireMutationCsrf(req, res)) return;
-    const document = documents.find((item) => item.id === Number(match[1]));
+    const document = documents.find((item) => item.id === Number(match[1]) && !item.shared);
     if (!document) return json(res, 404, { code: 'NOT_FOUND', message: '자료를 찾을 수 없습니다.', retryable: false });
     document.indexingStatus = 'READY';
     document.updatedAt = new Date().toISOString();
@@ -344,6 +354,7 @@ const server = http.createServer(async (req, res) => {
     const index = documents.findIndex((item) => item.id === Number(match[1]));
     if (index < 0) return json(res, 404, { code: 'NOT_FOUND', message: '자료를 찾을 수 없습니다.', retryable: false });
     if (req.method === 'GET') return json(res, 200, documents[index]);
+    if (documents[index].shared) return json(res, 404, { code: 'NOT_FOUND', message: '자료를 찾을 수 없습니다.', retryable: false });
     if (req.method === 'DELETE') {
       if (!requireMutationCsrf(req, res)) return;
       documents.splice(index, 1);

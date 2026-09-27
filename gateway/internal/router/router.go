@@ -79,6 +79,7 @@ func New(cfg config.Config, logger *slog.Logger) (http.Handler, error) {
 	mux.Handle("/api/chat/", limit(forward))
 
 	mux.Handle("POST /api/knowledge/documents", slow)
+	mux.Handle("POST /api/knowledge/documents/upload", slow)
 	mux.Handle("POST /api/knowledge/documents/{id}/reindex", slow)
 	mux.Handle("/api/", forward)
 

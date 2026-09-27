@@ -37,7 +37,7 @@ public class Document {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "owner_id", nullable = false)
+	@Column(name = "owner_id")
 	private Long ownerId;
 
 	@Column(nullable = false, length = 300)
@@ -107,7 +107,7 @@ public class Document {
 	private OffsetDateTime updatedAt;
 
 	public static Document create(
-			long ownerId,
+			Long ownerId,
 			String title,
 			DocumentType documentType,
 			List<String> projects,
@@ -140,6 +140,10 @@ public class Document {
 		document.embeddingModel = null;
 		document.indexingStatus = IndexingStatus.PENDING;
 		return document;
+	}
+
+	public boolean isShared() {
+		return ownerId == null;
 	}
 
 	public String beginIndexingAttempt() {

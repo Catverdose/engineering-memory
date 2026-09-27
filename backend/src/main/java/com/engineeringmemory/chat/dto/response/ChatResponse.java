@@ -51,7 +51,8 @@ public record ChatResponse(
 			int chunkIndex,
 			String heading,
 			double similarity,
-			String snippet) {
+			String snippet,
+			boolean shared) {
 
 		private static final int SNIPPET_CHARS = 240;
 
@@ -60,7 +61,7 @@ public record ChatResponse(
 					hit.documentId(), hit.chunkId(), hit.title(), hit.documentType().name(),
 					hit.documentType().getLabel(), hit.projects(), hit.technologies(), hit.tags(),
 					hit.occurredOn(), hit.chunkIndex(), hit.heading(), hit.similarity(),
-					hit.snippet(SNIPPET_CHARS));
+					hit.snippet(SNIPPET_CHARS), hit.shared());
 		}
 	}
 }

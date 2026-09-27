@@ -29,10 +29,26 @@ class ContextBuilderTest {
 		var context = builder.build("원인이 무엇인가요?", List.of(primary), history);
 
 		assertThat(context.prompt()).hasSizeLessThanOrEqualTo(2_048);
-		assertThat(context.prompt()).contains("[System]", "[Personal Knowledge]", "[User Question]");
+		assertThat(context.prompt()).contains("[System]", "[Knowledge]", "[User Question]");
 		assertThat(context.prompt()).contains("KKKKKKKKKK");
 		assertThat(context.prompt()).doesNotContain("OLD_HISTORY", "LATEST_HISTORY");
 		assertThat(context.sources()).containsExactly(primary);
+	}
+
+	@Test
+	@DisplayName("근거마다 개인 기록과 공용 자료를 구분해 표시하고, 공용 자료를 사용자 경험처럼 말하지 말라고 지시한다")
+	void labelsPersonalAndSharedSources() {
+		ContextBuilder builder = builder(4_000, 16_384, 1_024);
+		ChunkHit personal = hit(1L, "내 장애 기록", "내가 겪은 일");
+		ChunkHit shared = new ChunkHit(2L, 2L, "공용 기술 문서", DocumentType.TECH_DOC,
+				List.of(), List.of("http"), List.of(), null, 0, null, "일반 지식", 0.8, true);
+
+		var context = builder.build("질문", List.of(personal, shared), List.of());
+
+		assertThat(context.prompt())
+				.contains("Source 1 (" + ContextBuilder.PERSONAL_LABEL + "): ")
+				.contains("Source 2 (" + ContextBuilder.SHARED_LABEL + "): ")
+				.contains("(공용 자료)는 일반 기술 지식이므로 사용자가 겪거나 결정한 일처럼 말하지 말고");
 	}
 
 	@Test
@@ -89,6 +105,6 @@ class ContextBuilderTest {
 	private static ChunkHit hit(long id, String title, String content) {
 		return new ChunkHit(id, id, title, DocumentType.NOTE,
 				List.of("project"), List.of("java"), List.of(), null,
-				0, null, content, 0.9);
+				0, null, content, 0.9, false);
 	}
 }

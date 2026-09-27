@@ -9,8 +9,14 @@
 | `backend/` | Spring Boot 서버 |
 | `gateway/` | Go 리버스 프록시 |
 | `frontend/public/` | 정적 화면 (nginx가 그대로 서빙) |
-| `frontend/mock/` | 백엔드 없는 개발용 목 서버 |
-| `infra/` | nginx, PostgreSQL 초기화, Prometheus 설정 |
+| `frontend/mock/` | 백엔드 없는 개발용 목 서버 (`seed/` 자료를 불러옴) |
+| `infra/caddy/Caddyfile` | 공개 진입점. `SITE_ADDRESS`로 로컬 HTTP·도메인 HTTPS 전환 |
+| `infra/nginx/` | 정적 파일, 경로별 제한, 프록시 헤더 (`nginx.conf`, `forwarded.inc`) |
+| `infra/docker/`, `infra/monitoring/` | PostgreSQL 초기화, Prometheus 설정 |
+| `backend/src/main/resources/knowledge/reference-knowledge.json` | 공용 기본 지식 카탈로그 336건. 서버가 기동 시 자동 반영 |
+| `seed/project-knowledge.json` | 개인 초기 자료 62건 (프로젝트·경험·학습 기록) |
+| `scripts/import-project-knowledge.mjs` | 개인 초기 자료를 내 계정에 등록하는 스크립트 |
+| `docs/` | 프로젝트 문서. 진입점은 `README.md` |
 | `docker-compose.yml` | 전체 실행 구성 |
 
 ## 백엔드
@@ -28,7 +34,10 @@
 | 프롬프트 조립, 시스템 지시문, 예산 | `rag/service/ContextBuilder.java` |
 | 벡터 검색 SQL, 벡터 저장 | `knowledge/repository/DocumentChunkVectorRepository.java` |
 | 문서 목록·필터 SQL | `knowledge/repository/DocumentListRepository.java` |
-| 문서 등록·수정·삭제, 중복 검사 | `knowledge/service/DocumentService.java` |
+| 목록 범위 (내 자료·공용·전체) | `knowledge/enums/KnowledgeOwnership.java` |
+| 문서 등록·수정·삭제, 중복 검사, 공용 문서 쓰기 | `knowledge/service/DocumentService.java` |
+| 공용 기본 지식 카탈로그 읽기·검증 | `knowledge/seed/ReferenceKnowledgeCatalog.java` |
+| 공용 기본 지식 동기화 (등록·갱신·재색인·삭제) | `knowledge/seed/ReferenceKnowledgeSeeder.java` |
 | 파일 검증, PDF·텍스트 추출 | `knowledge/service/KnowledgeFileExtractor.java` |
 | 청크 분할 | `knowledge/service/DocumentChunker.java` |
 | 색인 큐, 합치기, 복구 | `knowledge/service/DocumentIndexingService.java` |

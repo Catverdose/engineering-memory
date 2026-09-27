@@ -23,9 +23,17 @@ public interface DocumentRepository extends OwnerScopedRepository<Document, Long
 
 	Optional<Document> findByIdAndOwnerId(Long id, Long ownerId);
 
+	Optional<Document> findByIdAndOwnerIdIsNull(Long id);
+
+	List<Document> findByOwnerIdIsNull();
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select d from Document d where d.id = :id and d.ownerId = :ownerId")
 	Optional<Document> findLockedByIdAndOwnerId(@Param("id") Long id, @Param("ownerId") Long ownerId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select d from Document d where d.id = :id and d.ownerId is null")
+	Optional<Document> findLockedSharedById(@Param("id") Long id);
 
 	boolean existsByOwnerIdAndContentHash(Long ownerId, String contentHash);
 
@@ -42,35 +50,35 @@ public interface DocumentRepository extends OwnerScopedRepository<Document, Long
 	@Query("""
 			select d.documentType, count(d)
 			  from Document d
-			 where d.ownerId = :ownerId
+			 where d.ownerId = :ownerId or d.ownerId is null
 			 group by d.documentType
 			""")
-	List<Object[]> countDocumentTypes(@Param("ownerId") Long ownerId);
+	List<Object[]> countVisibleDocumentTypes(@Param("ownerId") Long ownerId);
 
 	@Query(value = """
 			select distinct p.value
 			  from document d
 			 cross join lateral jsonb_array_elements_text(d.projects) p(value)
-			 where d.owner_id = :ownerId
+			 where d.owner_id = :ownerId or d.owner_id is null
 			 order by p.value
 			""", nativeQuery = true)
-	List<String> findDistinctProjects(@Param("ownerId") Long ownerId);
+	List<String> findVisibleProjects(@Param("ownerId") Long ownerId);
 
 	@Query(value = """
 			select distinct t.value
 			  from document d
 			 cross join lateral jsonb_array_elements_text(d.technologies) t(value)
-			 where d.owner_id = :ownerId
+			 where d.owner_id = :ownerId or d.owner_id is null
 			 order by t.value
 			""", nativeQuery = true)
-	List<String> findDistinctTechnologies(@Param("ownerId") Long ownerId);
+	List<String> findVisibleTechnologies(@Param("ownerId") Long ownerId);
 
 	@Query(value = """
 			select distinct t.value
 			  from document d
 			 cross join lateral jsonb_array_elements_text(d.tags) t(value)
-			 where d.owner_id = :ownerId
+			 where d.owner_id = :ownerId or d.owner_id is null
 			 order by t.value
 			""", nativeQuery = true)
-	List<String> findDistinctTags(@Param("ownerId") Long ownerId);
+	List<String> findVisibleTags(@Param("ownerId") Long ownerId);
 }

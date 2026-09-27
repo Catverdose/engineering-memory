@@ -23,7 +23,7 @@ public class DocumentChunk {
 	@Column(name = "document_id", nullable = false)
 	private Long documentId;
 
-	@Column(name = "owner_id", nullable = false)
+	@Column(name = "owner_id")
 	private Long ownerId;
 
 	@Column(name = "document_version", nullable = false)
@@ -46,7 +46,7 @@ public class DocumentChunk {
 
 	public static DocumentChunk create(
 			long documentId,
-			long ownerId,
+			Long ownerId,
 			int documentVersion,
 			int chunkIndex,
 			String heading,

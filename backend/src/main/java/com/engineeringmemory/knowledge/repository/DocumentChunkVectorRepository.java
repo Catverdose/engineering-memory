@@ -32,13 +32,13 @@ public class DocumentChunkVectorRepository {
 			       c.chunk_index,
 			       c.heading,
 			       c.content,
+			       d.owner_id IS NULL AS shared,
 			       1 - (c.embedding <=> CAST(:queryVector AS vector)) AS similarity
 			  FROM document_chunk c
 			  JOIN document d
 			    ON d.id = c.document_id
-			   AND d.owner_id = c.owner_id
-			 WHERE c.owner_id = :ownerId
-			   AND d.owner_id = :ownerId
+			   AND d.owner_id IS NOT DISTINCT FROM c.owner_id
+			 WHERE (c.owner_id = :ownerId OR c.owner_id IS NULL)
 			   AND d.indexing_status = 'READY'
 			   AND c.document_version = d.version
 			   AND c.embedding IS NOT NULL
@@ -50,7 +50,7 @@ public class DocumentChunkVectorRepository {
 			   SET embedding = CAST(? AS vector),
 			       embedding_model = ?
 			 WHERE id = ?
-			   AND owner_id = ?
+			   AND owner_id IS NOT DISTINCT FROM CAST(? AS bigint)
 			   AND document_version = ?
 			""";
 
@@ -69,7 +69,7 @@ public class DocumentChunkVectorRepository {
 		this.embeddingDimensions = ollamaProperties.embeddingDimensions();
 	}
 
-	public void updateEmbedding(long chunkId, long ownerId, int documentVersion,
+	public void updateEmbedding(long chunkId, Long ownerId, int documentVersion,
 			float[] embedding, String embeddingModel) {
 		String literal = toVectorLiteral(embedding);
 		int updated = jdbcTemplate.update(UPDATE_VECTOR_SQL,
@@ -148,7 +148,8 @@ public class DocumentChunkVectorRepository {
 				rs.getInt("chunk_index"),
 				rs.getString("heading"),
 				rs.getString("content"),
-				rs.getDouble("similarity"));
+				rs.getDouble("similarity"),
+				rs.getBoolean("shared"));
 	}
 
 	private List<String> readStringList(String json) {

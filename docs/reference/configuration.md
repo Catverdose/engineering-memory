@@ -11,15 +11,16 @@
 | `prod` | 운영 시 `BACKEND_PROFILES=docker,prod` | secure 쿠키, `ADMIN_PASSWORD` 비어 있으면 기동 거부 |
 
 - 프록시 헤더 신뢰는 `docker`에만 둠. 프록시 없이 뜨는 프로파일에서 켜면 클라이언트가 IP를 위조해 요청 제한을 피할 수 있음 (`ConfigYamlTest`가 검사함)
-- `prod`의 secure 쿠키는 HTTPS에서만 전송됨. 현재 nginx 설정은 80번 HTTP뿐이라 앞단에 TLS 종료가 없으면 로그인이 유지되지 않음
+- `prod`의 secure 쿠키는 HTTPS에서만 전송됨. `SITE_ADDRESS`를 도메인으로 두어 Caddy가 HTTPS를 제공할 때만 `prod`를 켤 것. `:80`(HTTP)에서 켜면 로그인이 유지되지 않음
 
 ## `.env`
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
-| `BACKEND_PROFILES` | `docker` | compose에서 백엔드 프로파일 |
+| `BACKEND_PROFILES` | `docker` | compose에서 백엔드 프로파일. 운영은 `docker,prod` |
+| `SITE_ADDRESS` | `:80` | Caddy 사이트 주소. `:80`은 로컬 HTTP, 도메인이면 자동 HTTPS |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` | `localhost` / `5432` / `engineering_assistant` | compose 안에서는 `postgres:5432`로 덮어씀 |
-| `DB_USERNAME` / `DB_PASSWORD` | `postgres` / – | postgres 컨테이너 초기 계정과 같아야 함 |
+| `DB_USERNAME` / `DB_PASSWORD` | `postgres` / `postgres` | postgres 컨테이너 초기 계정과 같아야 함. 기본 비밀번호는 로컬 전용이므로 반드시 바꿀 것 |
 | `OLLAMA_PORT` | `11434` | 호스트에 노출할 Ollama 포트 (compose) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | 로컬 백엔드용. compose 안에서는 `http://ollama:11434`로 덮어씀 |
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | 바꾸면 모든 문서 재색인 필요 |
@@ -28,6 +29,7 @@
 | `OLLAMA_NUM_PARALLEL` | `1` | Ollama 서버 동시 처리 수 |
 | `LLM_PROVIDER` | `OLLAMA` | `VLLM`은 enum만 있고 구현 없음 |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / 빈 값 | 사용자가 한 명도 없을 때만 최초 owner 생성. `{bcrypt}…`처럼 `{`로 시작하면 인코딩된 값으로 봄 |
+| `RAG_SIMILARITY_THRESHOLD` 등 | – | `.env.example`에는 없음. `rag.similarity-threshold` 같은 설정을 환경변수 이름으로 덮어씀. Docker 실행에서만 적용되고 로컬 `bootRun`에서는 무시됨 ([troubleshooting](../troubleshooting.md#env에-넣은-설정이-로컬-실행에서-무시됨)) |
 
 ## 백엔드 주요 설정
 
@@ -42,6 +44,8 @@
 | `knowledge.indexing.embedding-batch-size` | 32 | 임베딩 호출 한 번의 청크 수 |
 | `knowledge.indexing.max-concurrent-indexing` | 2 | 동시 색인 문서 수 |
 | `knowledge.indexing.recovery-poll-delay` | 10s | PENDING 복구 주기 |
+| `knowledge.seed.enabled` | true | 기동 시 공용 기본 지식을 카탈로그와 맞춤. false면 공용 문서를 만들거나 바꾸지 않음 |
+| `knowledge.seed.retry-delay` | 30s | 임베딩 모델이 준비될 때까지 다시 확인하는 간격 |
 | `ollama.num-ctx` / `ollama.num-predict` | 32768 / 1024 | 모델 컨텍스트 / 최대 출력 토큰 |
 | `ollama.temperature` | 0.2 | |
 | `ollama.read-timeout` | 180s | 모델 응답 대기 |

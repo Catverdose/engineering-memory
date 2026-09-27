@@ -1,6 +1,7 @@
 package com.engineeringmemory.knowledge.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +33,8 @@ public class DocumentIndexWriter {
 	}
 
 	@Transactional
-	public IndexSource prepare(long ownerId, long documentId) {
-		Document document = documentRepository.findLockedByIdAndOwnerId(documentId, ownerId)
-				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+	public IndexSource prepare(Long ownerId, long documentId) {
+		Document document = findLocked(ownerId, documentId);
 		if (document.getIndexingStatus() != IndexingStatus.PENDING) {
 			throw new BusinessException(ErrorCode.INVARIANT_VIOLATION,
 					"색인 대기 상태가 아닌 문서입니다. documentId=" + documentId);
@@ -54,10 +54,8 @@ public class DocumentIndexWriter {
 	}
 
 	@Transactional
-	public void requestIndexing(long ownerId, long documentId) {
-		Document document = documentRepository.findLockedByIdAndOwnerId(documentId, ownerId)
-				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-		document.requestIndexing();
+	public void requestIndexing(Long ownerId, long documentId) {
+		findLocked(ownerId, documentId).requestIndexing();
 	}
 
 	@Transactional
@@ -73,7 +71,11 @@ public class DocumentIndexWriter {
 			throw new BusinessException(ErrorCode.INVARIANT_VIOLATION, "저장할 문서 청크가 없습니다.");
 		}
 
-		chunkRepository.deleteByDocumentIdAndOwnerId(source.documentId(), source.ownerId());
+		if (source.ownerId() == null) {
+			chunkRepository.deleteByDocumentIdAndOwnerIdIsNull(source.documentId());
+		} else {
+			chunkRepository.deleteByDocumentIdAndOwnerId(source.documentId(), source.ownerId());
+		}
 		chunkRepository.flush();
 
 		for (IndexedChunk indexed : chunks) {
@@ -93,21 +95,34 @@ public class DocumentIndexWriter {
 
 	@Transactional
 	public void markFailed(IndexSource source) {
-		documentRepository.findByIdAndOwnerId(source.documentId(), source.ownerId())
+		find(source.ownerId(), source.documentId())
 				.filter(document -> document.getVersion().equals(source.documentVersion()))
 				.filter(document -> document.getIndexingStatus() == IndexingStatus.PENDING)
 				.filter(document -> document.isCurrentIndexingAttempt(source.indexingAttempt()))
 				.ifPresent(Document::markIndexingFailed);
 	}
 
-	private Document getOwned(long ownerId, long documentId) {
-		return documentRepository.findByIdAndOwnerId(documentId, ownerId)
+	private Document getOwned(Long ownerId, long documentId) {
+		return find(ownerId, documentId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+	}
+
+	private Optional<Document> find(Long ownerId, long documentId) {
+		return ownerId == null
+				? documentRepository.findByIdAndOwnerIdIsNull(documentId)
+				: documentRepository.findByIdAndOwnerId(documentId, ownerId);
+	}
+
+	private Document findLocked(Long ownerId, long documentId) {
+		return (ownerId == null
+				? documentRepository.findLockedSharedById(documentId)
+				: documentRepository.findLockedByIdAndOwnerId(documentId, ownerId))
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 	}
 
 	public record IndexSource(
 			long documentId,
-			long ownerId,
+			Long ownerId,
 			int documentVersion,
 			String indexingAttempt,
 			String title,

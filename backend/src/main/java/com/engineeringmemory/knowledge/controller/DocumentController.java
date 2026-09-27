@@ -37,6 +37,7 @@ import com.engineeringmemory.knowledge.dto.response.DocumentSummaryResponse;
 import com.engineeringmemory.knowledge.dto.response.KnowledgeFacetsResponse;
 import com.engineeringmemory.knowledge.entity.Document.IndexingStatus;
 import com.engineeringmemory.knowledge.enums.DocumentType;
+import com.engineeringmemory.knowledge.enums.KnowledgeOwnership;
 import com.engineeringmemory.knowledge.service.DocumentService;
 import com.engineeringmemory.knowledge.service.DocumentService.OriginalDocument;
 
@@ -95,14 +96,15 @@ public class DocumentController {
 			@RequestParam(required = false, name = "indexingStatus")
 			@Size(max = 3) List<IndexingStatus> indexingStatuses,
 			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
+			@RequestParam(required = false) LocalDate to,
+			@RequestParam(defaultValue = "MINE") KnowledgeOwnership ownership) {
 		if (from != null && to != null && from.isAfter(to)) {
 			throw new IllegalArgumentException("검색 기간의 시작일은 종료일보다 늦을 수 없습니다.");
 		}
 		Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 100)));
 		return ResponseEntity.ok()
 				.cacheControl(CacheControl.noStore())
-				.body(documentService.list(requireOwnerId(authentication), query, documentTypes,
+				.body(documentService.list(requireOwnerId(authentication), ownership, query, documentTypes,
 						projects, technologies, tags, indexingStatuses, from, to, pageable));
 	}
 

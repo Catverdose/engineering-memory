@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "project": "engineering-memory",
+  "kind": "personal",
   "documents": [
     {
       "title": "Engineering Memory — 제품 요구사항과 범위",
@@ -20,7 +20,7 @@
       "tags": ["아키텍처", "구성요소"],
       "sourcePath": "docs/architecture.md",
       "replacesLegacy": true,
-      "content": "브라우저 요청은 nginx → Go gateway → Spring Boot 순서로 흐른다. nginx는 정적 파일과 프록시 설정, gateway는 경로별 제한·타임아웃·SSE/WS 전달, 백엔드는 인증·문서 색인·검색·대화를 맡는다. PostgreSQL+pgvector에는 문서와 벡터·대화가 저장되고, Ollama는 임베딩과 답변 생성에 사용된다."
+      "content": "브라우저 요청은 Caddy → nginx → Go gateway → Spring Boot 순서로 흐른다. Caddy는 유일한 공개 진입점으로 도메인 HTTPS를 맡고, nginx는 정적 파일과 프록시 설정, gateway는 경로별 제한·타임아웃·SSE/WS 전달, 백엔드는 인증·문서 색인·검색·대화를 맡는다. PostgreSQL+pgvector에는 문서와 벡터·대화가 저장되고, Ollama는 임베딩과 답변 생성에 사용된다. 문서는 사용자 소유의 개인 자료와 owner 없는 공용 자료로 나뉘며, 검색은 내 자료와 공용 자료를 함께 본다."
     },
     {
       "title": "Engineering Memory — API와 데이터 계약",
@@ -30,7 +30,7 @@
       "tags": ["API", "계약", "CSRF"],
       "sourcePath": "docs/reference/api.md",
       "replacesLegacy": true,
-      "content": "인증은 세션 쿠키를 쓰며 변경 요청에는 XSRF-TOKEN 쿠키를 X-XSRF-TOKEN 헤더로 보낸다. 지식 API는 /api/knowledge/documents에서 등록·조회·수정·삭제·재색인을 제공한다. 채팅은 일반 HTTP, SSE, WebSocket을 지원한다. 다른 owner의 문서 ID를 조회하면 404로 응답한다. 세부 요청·응답 및 오류 코드는 원본 API 문서를 따른다."
+      "content": "인증은 세션 쿠키를 쓰며 변경 요청에는 XSRF-TOKEN 쿠키를 X-XSRF-TOKEN 헤더로 보낸다. 지식 API는 /api/knowledge/documents에서 등록·조회·수정·삭제·재색인을 제공하고, 목록은 ownership 파라미터(MINE·SHARED·ALL)로 내 자료·공용 자료 범위를 고른다. 채팅은 일반 HTTP, SSE, WebSocket을 지원한다. 다른 owner의 문서 ID를 조회하면 404로 응답한다. owner 없는 공용 자료는 모든 사용자가 읽을 수 있지만 수정·삭제·재색인은 404다. 세부 요청·응답 및 오류 코드는 원본 API 문서를 따른다."
     },
     {
       "title": "Engineering Memory — 환경 설정과 운영 제약",
@@ -40,7 +40,7 @@
       "tags": ["설정", "프로파일", "보안"],
       "sourcePath": "docs/reference/configuration.md",
       "replacesLegacy": true,
-      "content": "백엔드는 local·docker·prod 프로파일을 쓴다. docker 프로파일만 신뢰 프록시 헤더를 켜고, prod는 secure 쿠키와 관리자 비밀번호를 요구한다. gateway는 일반·느린·스트리밍·WebSocket 요청에 다른 타임아웃을 적용한다. 임베딩 차원과 DB vector 크기는 일치해야 하며, 임베딩 모델 변경 뒤에는 문서를 재색인해야 한다. 실제 비밀번호는 지식 문서에 저장하지 않는다."
+      "content": "백엔드는 local·docker·prod 프로파일을 쓴다. docker 프로파일만 신뢰 프록시 헤더를 켜고, prod는 secure 쿠키와 관리자 비밀번호를 요구한다. gateway는 일반·느린·스트리밍·WebSocket 요청에 다른 타임아웃을 적용한다. 임베딩 차원과 DB vector 크기는 일치해야 하며, 임베딩 모델 변경 뒤에는 문서를 재색인해야 한다. Caddy 사이트 주소는 SITE_ADDRESS로 정하며 비우면 로컬 HTTP, 도메인이면 HTTPS다. 공용 기본 지식 동기화는 knowledge.seed.enabled로 끌 수 있다. 실제 비밀번호는 지식 문서에 저장하지 않는다."
     },
     {
       "title": "Engineering Memory — 실행과 첫 질문 검증",
@@ -50,7 +50,7 @@
       "tags": ["시작하기", "검증", "배포"],
       "sourcePath": "docs/quickstart.md",
       "replacesLegacy": true,
-      "content": "Docker Compose로 PostgreSQL·Ollama·백엔드·gateway·nginx를 기동한다. Ollama에는 bge-m3와 exaone3.5:7.8b 모델이 필요하다. /readyz가 UP인지 확인한 다음 로그인해 문서를 등록한다. 문서가 READY가 된 뒤 질문하고 답변의 근거 문서가 등록 자료와 일치하는지 확인한다. 화면만 볼 때는 메모리 기반 목 서버를 사용한다."
+      "content": "Docker Compose로 PostgreSQL·Ollama·백엔드·gateway·nginx·Caddy를 기동한다. 로컬은 SITE_ADDRESS를 비워 http://localhost로, 운영은 도메인을 넣어 HTTPS로 접속한다. Ollama에는 bge-m3와 exaone3.5:7.8b 모델이 필요하고, 모델이 준비되면 백엔드가 공용 기본 지식을 자동으로 등록한다. /readyz가 UP인지 확인한 다음 로그인해 문서를 등록한다. 문서가 READY가 된 뒤 질문하고 답변의 근거 문서가 등록 자료와 일치하는지 확인한다. 화면만 볼 때는 메모리 기반 목 서버를 사용한다."
     },
     {
       "title": "Engineering Memory — 장애 대응 가이드",
@@ -60,7 +60,7 @@
       "tags": ["트러블슈팅", "색인실패", "NO_CONTEXT"],
       "sourcePath": "docs/troubleshooting.md",
       "replacesLegacy": true,
-      "content": "문서가 FAILED면 Ollama 연결과 bge-m3 설치 여부를 확인한 뒤 재색인한다. PENDING이 길면 채팅 우선 처리와 복구 큐를 확인한다. 답변이 NO_CONTEXT면 문서 READY 여부, 검색 범위, 유사도 임계값을 점검한다. /readyz 503은 모델 부재·백엔드 기동 중·DB 접속 문제 등이 원인일 수 있다. 증상별 명령과 주의점은 원본 가이드에 있다."
+      "content": "문서가 FAILED면 Ollama 연결과 bge-m3 설치 여부를 확인한 뒤 재색인한다. PENDING이 길면 채팅 우선 처리와 복구 큐를 확인한다. 답변이 NO_CONTEXT면 문서 READY 여부, 검색 범위, 유사도 임계값을 점검한다. /readyz 503은 모델 부재·백엔드 기동 중·DB 접속 문제 등이 원인일 수 있다. 공용 자료가 보이지 않으면 백엔드 로그의 공용 기본 지식 동기화 줄과 DB 스키마 재적용 여부를 확인한다. 증상별 명령과 주의점은 원본 가이드에 있다."
     },
     {
       "title": "Engineering Memory — 기능별 코드 위치",
@@ -78,47 +78,10 @@
       "projects": ["engineering-memory"],
       "technologies": [],
       "tags": ["로드맵", "구현현황", "미구현"],
-      "occurredOn": "2026-09-23",
+      "occurredOn": "2026-09-28",
       "sourcePath": "docs/roadmap.md",
       "replacesLegacy": true,
-      "content": "2026-09-23 기준 Phase 1 MVP는 완료됐다. 문서 수정·범위 검색·근거 표시·SSE/WS·멀티턴 대화도 선반영됐다. 자동 분류, 검색 품질 개선, Prometheus 수집, Graph 검색, 회원가입, 사용자별 AI 프로필 등은 부분 구현 또는 미구현이다. 계획 항목을 이미 제공되는 기능으로 안내하지 않도록 원본 로드맵의 상태 표시를 확인한다."
-    },
-    {
-      "title": "Engineering Memory — RAG 기준값과 검증 과제",
-      "documentType": "EXPERIMENT",
-      "projects": ["engineering-memory"],
-      "technologies": ["Ollama", "bge-m3", "pgvector"],
-      "tags": ["RAG", "기준선", "미검증"],
-      "sourcePath": "docs/rag-baseline-curated.md",
-      "replacesLegacy": true,
-      "content": "현재 설정은 bge-m3 임베딩 1024차원, exaone3.5:7.8b 생성, 청크 1200자·겹침 150자, Top-K 5, 유사도 임계값 0.45다. 이는 최적값이 아니라 Phase 1 기준선이다. 실제 개발 문서와 고정 평가 질문·정답을 확보한 뒤 설정을 한 번에 하나씩 변경하며 검색 결과를 비교해야 한다. 근거가 없으면 생성 모델을 호출하지 않는다."
-    },
-    {
-      "title": "Engineering Memory — 검색 단계의 owner 격리",
-      "documentType": "DECISION",
-      "projects": ["engineering-memory"],
-      "technologies": ["Spring Boot", "PostgreSQL", "pgvector"],
-      "tags": ["owner", "보안", "검색"],
-      "sourcePath": "docs/architecture.md",
-      "content": "ownerId는 요청 본문이 아니라 인증된 principal에서 얻는다. 문서·대화 조회와 벡터 검색은 처음부터 owner 조건을 적용해야 한다. 전체 사용자 벡터를 먼저 뽑은 뒤 권한으로 걸러내면 다른 사용자의 후보가 검색 자리를 차지할 수 있다. document_chunk와 chat_message는 (id, owner_id) 복합 외래키로 부모와 같은 owner에 묶는다."
-    },
-    {
-      "title": "Engineering Memory — 문서 등록과 비동기 색인",
-      "documentType": "PROJECT_DOC",
-      "projects": ["engineering-memory"],
-      "technologies": ["Spring Boot", "Ollama", "pgvector"],
-      "tags": ["문서", "청크", "색인"],
-      "sourcePath": "docs/architecture.md",
-      "content": "등록 API는 문서를 PENDING으로 저장하고 202를 반환한다. 작업자는 제목 단위 Markdown 분할과 청크 임베딩을 수행한 뒤 기존 청크를 새 버전으로 교체하고 READY로 바꾼다. 처리 중 수정된 문서의 오래된 색인 결과는 버린다. 실패하면 FAILED가 되며 자동 재시도하지 않으므로 원인을 고친 뒤 재색인한다."
-    },
-    {
-      "title": "Engineering Memory — 검색과 근거 기반 답변",
-      "documentType": "PROJECT_DOC",
-      "projects": ["engineering-memory"],
-      "technologies": ["pgvector", "Ollama", "Spring Boot"],
-      "tags": ["RAG", "검색", "근거"],
-      "sourcePath": "docs/architecture.md",
-      "content": "질문과 최근 대화로 검색어를 만들고, 현재 owner의 READY 문서·현재 버전·현재 임베딩 모델만 벡터 검색한다. 유사도 0.45 미만은 제외하고 최대 5개 청크를 프롬프트에 넣는다. 검색된 모든 청크가 아니라 실제 프롬프트에 들어간 청크만 답변 근거로 기록한다. 근거가 없으면 NO_CONTEXT를 저장하고 LLM을 호출하지 않는다."
+      "content": "2026-09-28 기준 Phase 1 MVP는 완료됐고 Phase 2가 진행 중이다. 문서 수정·범위 검색·근거 표시·공용 기본 지식 분리·SSE/WS·멀티턴 대화가 선반영됐다. 자동 분류, 검색 품질 개선, Prometheus 수집, Graph 검색, 회원가입, 사용자별 AI 프로필 등은 부분 구현 또는 미구현이다. 계획 항목을 이미 제공되는 기능으로 안내하지 않도록 원본 로드맵의 상태 표시를 확인한다."
     },
     {
       "title": "Engineering Memory — 대화와 스트리밍 상태",
@@ -130,328 +93,488 @@
       "content": "HTTP·SSE·WebSocket 답변은 ChatOrchestrator 하나를 거쳐 같은 대화·근거 상태를 저장한다. SSE/WS 이벤트는 meta, delta, done 또는 error 순서로 전달된다. 프론트엔드는 WebSocket 연결에 실패하면 SSE로 전환한다. 생성 중 서버가 재시작되면 남은 GENERATING 메시지를 FAILED로 정리한다."
     },
     {
-      "title": "Engineering Memory — Go gateway의 역할",
+      "title": "Engineering Memory — GPU 기반 단일 서버 실행 요구사항",
       "documentType": "PROJECT_DOC",
       "projects": ["engineering-memory"],
-      "technologies": ["Go", "HTTP", "SSE", "WebSocket"],
-      "tags": ["gateway", "프록시", "타임아웃"],
-      "sourcePath": "gateway/internal/router/router.go",
-      "content": "Go gateway는 일반 API, 느린 채팅·문서 요청, SSE, WebSocket을 경로별로 다른 핸들러와 타임아웃에 연결한다. 요청 ID와 IP별 채팅 제한을 적용하고 백엔드 상태를 /readyz로 확인한다. SSE 프록시는 즉시 flush하고 X-Accel-Buffering: no를 설정한다. 앱의 이 구현 사실은 Go 언어의 범용 규칙과 별도 자료로 관리한다."
+      "technologies": ["Docker Compose", "NVIDIA GPU", "Ollama", "pgvector"],
+      "tags": ["배포", "실행환경", "GPU", "단일서버"],
+      "sourcePath": "README.md",
+      "content": "Engineering Memory의 Quick start는 Docker Compose 기반 단일 서버 실행을 전제로 한다. Ollama 컨테이너가 GPU를 예약하므로 NVIDIA GPU와 NVIDIA Container Toolkit이 필요하고, PostgreSQL+pgvector, Ollama, Spring Boot backend, Go gateway, nginx, Caddy를 함께 기동한다. 임베딩 모델은 bge-m3, 생성 모델은 exaone3.5:7.8b이며 두 모델에 약 6GB의 디스크가 필요하다. 호스트에는 Caddy가 쓰는 80·443 포트가 열려 있어야 한다. 따라서 현재 구성을 큰 변경 없이 옮기려면 GPU를 쓸 수 있고 Docker Compose를 실행할 수 있는 단일 VM이 가장 직접적인 배포 대상이다. 이는 구현에서 확인되는 실행 조건이며 특정 클라우드나 인스턴스 유형을 현재 운영 환경으로 뜻하지 않는다."
     },
     {
-      "title": "Engineering Memory — DB 스키마 변경 주의",
+      "title": "Engineering Memory — Docker Compose 서비스 경계와 외부 노출",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Docker Compose", "PostgreSQL", "Ollama", "Spring Boot", "Go", "nginx", "Caddy", "Prometheus"],
+      "tags": ["배포", "네트워크", "포트", "서비스경계"],
+      "sourcePath": "docker-compose.yml",
+      "content": "Docker Compose는 postgres, ollama, backend, gateway, nginx, caddy를 기본 서비스로 구성하고 prometheus는 monitoring 프로파일로 선택 실행한다. PostgreSQL(기본 5432)과 Ollama(OLLAMA_PORT, 기본 11434)는 호스트의 127.0.0.1에만 바인딩되어 외부에 직접 노출되지 않는다. backend 8080, gateway 8000, nginx 80은 Compose 내부 네트워크에만 expose된다. 외부 진입점은 Caddy 하나로, 호스트의 80·443(443/udp 포함)을 받아 nginx로 전달한다. SITE_ADDRESS를 비우면 :80으로 로컬 HTTP만 받고, 도메인을 넣으면 인증서를 자동 발급해 HTTPS를 제공한다. PostgreSQL 데이터, Ollama 모델, Prometheus 데이터, Caddy 인증서·설정은 named volume에 저장된다. Ollama 서비스에는 NVIDIA GPU device reservation이 선언되어 있다. monitoring 프로파일을 켜면 Prometheus 9090은 모든 인터페이스에 공개되므로 운영 서버에서는 접근 제한이 필요하다."
+    },
+    {
+      "title": "Engineering Memory — Nginx SSE·WebSocket 리버스 프록시 설정",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["nginx", "SSE", "WebSocket", "HTTP"],
+      "tags": ["리버스프록시", "스트리밍", "SSE", "WebSocket", "배포"],
+      "sourcePath": "infra/nginx/nginx.conf",
+      "content": "nginx는 Caddy 뒤에서 정적 프론트엔드를 직접 제공하고 /api 경로를 Go gateway로 프록시한다. SSE 경로 /api/chat/messages/stream은 proxy_buffering과 proxy_cache를 끄고 420초 read/send timeout을 쓴다. WebSocket 경로 /api/chat/ws는 HTTP/1.1 Upgrade·Connection 헤더를 넘기고 2100초 timeout을 둔다. 일반 채팅(300초)과 문서 등록·수정·재색인 경로도 별도의 긴 timeout을 쓰며, /api/knowledge/documents, /documents/upload, /documents/{id}에만 21MB client_max_body_size를 적용하고 나머지는 1MB다. realip 설정으로 사설 대역에서 온 X-Forwarded-For를 믿어 실제 클라이언트 IP를 복원하고, Caddy가 준 X-Forwarded-Proto를 그대로 넘긴다. server 블록은 80번 포트와 server_name _이며 TLS는 앞단 Caddy가 종료한다."
+    },
+    {
+      "title": "Engineering Memory — 운영 프로파일의 Secure 세션 쿠키",
+      "documentType": "TECH_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Spring Boot", "HTTP Session", "HTTPS"],
+      "tags": ["보안", "세션", "쿠키", "운영환경"],
+      "sourcePath": "backend/src/main/resources/application-prod.yml",
+      "content": "prod 프로파일은 세션 쿠키에 secure=true를 설정한다. Secure 쿠키는 HTTPS 요청에만 전송되므로 prod는 TLS가 적용된 주소에서만 써야 하고, HTTP로 접속하면 로그인이 유지되지 않는다. 운영에서는 BACKEND_PROFILES=docker,prod로 두 프로파일을 함께 켜고, SITE_ADDRESS에 도메인을 넣어 Caddy가 HTTPS를 제공하게 한다. prod는 ADMIN_PASSWORD가 비어 있으면 기동을 거부한다."
+    },
+    {
+      "title": "Engineering Memory — Phase 1 RAG Baseline",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Spring Boot", "PostgreSQL", "pgvector", "Ollama"],
+      "tags": ["rag", "baseline", "phase1", "retrieval", "embedding"],
+      "sourcePath": "docs/phase1-baseline.md",
+      "content": "Phase 1에서 Knowledge 등록 → Chunking → Embedding → PostgreSQL/pgvector 저장 → Vector Search → RAG Context → Local LLM 답변까지의 기본 파이프라인 동작을 확인했다. 기준 설정은 bge-m3 1024차원 임베딩, exaone3.5:7.8b 생성 모델, 청크 1200자·겹침 150자, top-k 5, 문서당 최대 청크 3개, 프롬프트 상한 10,000자, similarity-threshold 0.45, exact scan이다. 이 값들은 최적값이 아니라 이후 Retrieval 실험의 기준점이다. 고정 평가 질문과 기대 근거 세트를 만든 뒤 설정을 한 번에 하나씩 바꿔 비교한다."
+    },
+    {
+      "title": "Engineering Memory — 비동기 문서 색인 수명주기",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Spring Boot", "PostgreSQL", "Ollama"],
+      "tags": ["indexing", "async", "pending", "ready", "failed"],
+      "sourcePath": "docs/architecture.md",
+      "content": "문서 등록·수정·재색인 요청은 document를 PENDING 상태로 저장한 뒤 비동기 색인을 예약하고, API는 완료를 기다리지 않고 202 Accepted와 PENDING을 반환한다. 색인 작업은 청크 분할, 배치 임베딩, 기존 청크 교체와 벡터 저장을 한 트랜잭션으로 마친 뒤 READY로 바꾸고, 실패하면 FAILED가 된다. 색인 중 문서가 바뀌면 version·상태·indexing_attempt 검증으로 오래된 결과를 버린다. 큐가 가득 차도 문서는 PENDING으로 남고 10초 주기 복구 작업이 다시 예약한다. FAILED는 자동으로 다시 시도하지 않아 원인을 고친 뒤 재색인해야 한다. 공용 자료는 백엔드를 다시 띄우면 동기화가 FAILED를 재색인한다."
+    },
+    {
+      "title": "Engineering Memory — 임베딩 입력에 메타데이터를 포함하는 이유",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Embedding", "Spring Boot"],
+      "tags": ["embedding", "metadata", "title", "tags", "reindex"],
+      "sourcePath": "docs/architecture.md",
+      "content": "문서 청크의 임베딩 입력에는 본문 앞에 제목, 자료 유형, 프로젝트, 기술, 태그, 섹션 제목을 붙인다. 그래서 질문에 프로젝트명·기술명·태그 표현을 쓰면 본문에 그 단어가 없어도 검색 단서가 된다. 같은 이유로 메타데이터를 수정하면 임베딩 입력이 바뀌므로 version을 올리고 다시 색인한다. 현재 구현은 어떤 메타데이터를 고치든 재색인하며, 색인이 끝날 때까지 그 문서는 검색에서 빠진다."
+    },
+    {
+      "title": "Engineering Memory — Retrieval 후보 선별과 Context 제한",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["pgvector", "Embedding", "Spring Boot"],
+      "tags": ["retrieval", "top-k", "threshold", "context", "candidate"],
+      "sourcePath": "backend/src/main/java/com/engineeringmemory/rag/service/RetrievalService.java",
+      "content": "검색어는 질문에 최근 대화를 붙여 최대 2,400자로 만든다. RetrievalService는 이를 임베딩한 뒤 candidateLimit=min(200, topK×4)만큼 벡터 후보를 내 자료와 공용 자료에서 함께 조회한다. similarity가 threshold보다 낮은 후보를 빼고, 문서별 최대 청크 수와 프롬프트 문자 예산을 적용해 topK까지 고른다. threshold는 SQL 후보 수를 늘리는 값이 아니라 후보를 Context에 받아들일지 정하는 필터다. 이어서 ContextBuilder가 프롬프트 상한 안에 들어가는 청크만 넣고, 답변의 근거 목록에는 검색 결과 전체가 아니라 실제로 프롬프트에 들어간 청크만 기록한다."
+    },
+    {
+      "title": "Engineering Memory — Owner 필터를 벡터 순위 계산 전에 적용",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["PostgreSQL", "pgvector", "Spring Security"],
+      "tags": ["owner", "isolation", "vector-search", "security"],
+      "sourcePath": "backend/src/main/java/com/engineeringmemory/knowledge/repository/DocumentChunkVectorRepository.java",
+      "content": "ownerId는 요청 본문이 아니라 인증된 principal에서만 얻는다. 벡터 검색 SQL은 \"내 청크 또는 공용 청크(owner_id IS NULL)\", READY 상태, 현재 document version, embedding 존재, 현재 embedding_model 조건을 ORDER BY 거리와 LIMIT보다 먼저 적용한다. 이 순서가 아니면 다른 사용자의 가까운 벡터가 Top-K 자리를 차지한 뒤 애플리케이션에서 제거되어 결과가 비는 문제가 생긴다. document와 document_chunk는 owner_id가 IS NOT DISTINCT FROM으로 같을 때만 조인한다. 그래서 owner가 비어 있는 청크가 개인 문서를 가리켜도 공용으로 노출되지 않는다. DB에서도 document_chunk와 chat_message는 (id, owner_id) 복합 외래키로 부모와 같은 owner에 묶고, 공용 청크는 document_id 외래키로 무결성을 지킨다."
+    },
+    {
+      "title": "Engineering Memory — Embedding Model 변경 감지와 재색인",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Embedding", "pgvector", "Ollama"],
+      "tags": ["embedding-model", "reindex", "model-switch", "compatibility"],
+      "sourcePath": "docs/architecture.md",
+      "content": "각 document_chunk에는 embedding_model을 저장하고, 검색 때는 현재 설정된 임베딩 모델로 만든 청크만 조회한다. 문서가 마지막으로 색인된 모델과 현재 모델이 다르면 needsReindex가 true가 되고 화면에 재색인 필요로 표시된다. 재색인 전까지 그 문서의 청크는 검색에서 빠지는데, 서로 다른 임베딩 공간의 벡터를 섞지 않기 위한 안전장치다. 개인 자료는 사용자가 재색인하고, 공용 자료는 백엔드를 다시 띄우면 동기화가 옛 모델 문서를 자동으로 재색인한다."
+    },
+    {
+      "title": "Engineering Memory — 현재 벡터 스키마는 1024차원으로 고정",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["PostgreSQL", "pgvector", "Embedding"],
+      "tags": ["vector", "dimension", "1024", "schema", "model-switch"],
+      "sourcePath": "backend/src/main/resources/db/schema.sql",
+      "content": "document_chunk.embedding 컬럼은 vector(1024)로 정의되어 있다. Ollama 클라이언트는 임베딩 응답의 차원을, 벡터 저장소는 DB에 보낼 벡터의 길이와 유한값을 OLLAMA_EMBEDDING_DIMENSIONS 설정과 대조한다. 따라서 지금 구조에서 임베딩 모델을 바꾸려면 1024차원 모델부터 비교하는 것이 단순하다. 차원이 다른 모델을 쓰려면 스키마를 바꾸거나 모델별 임베딩 저장 구조가 필요하다."
+    },
+    {
+      "title": "Engineering Memory — 근거가 없으면 LLM을 호출하지 않는 정책",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["RAG", "Spring Boot", "Ollama"],
+      "tags": ["no-context", "hallucination", "grounding", "decision"],
+      "sourcePath": "backend/src/main/java/com/engineeringmemory/application/chat/ChatOrchestrator.java",
+      "content": "ChatOrchestrator는 검색 결과에 근거가 없으면 NO_CONTEXT 안내문을 대화에 저장하고 생성 모델을 호출하지 않는다. 개인 지식에 근거가 없는 내용을 사용자의 실제 경험이나 프로젝트 사실처럼 생성하는 일을 줄이기 위한 정책이다. 근거가 있을 때만 RAG Context를 조립하고 생성 모델을 호출한다. 근거가 있을 때도 프롬프트에는 근거마다 (개인 기록)과 (공용 자료)를 표시하고, 공용 자료를 사용자 경험처럼 말하지 말라고 지시한다."
+    },
+    {
+      "title": "Engineering Memory — HTTP·SSE·WebSocket은 동일 ChatOrchestrator를 사용",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Spring Boot", "SSE", "WebSocket", "HTTP"],
+      "tags": ["chat", "orchestrator", "transport", "streaming"],
+      "sourcePath": "docs/architecture.md",
+      "content": "일반 HTTP, SSE, WebSocket 세 전송 방식은 모두 같은 ChatOrchestrator를 거친다. 전송 방식이 달라도 대화 생성, Retrieval, RAG Context, 모델 호출, 근거 저장, 상태 전이 규칙은 같다. 전송 방식에 따라 달라지는 것은 AnswerSink 구현뿐이다. 조각 전송을 받는 SSE·WebSocket은 스트리밍 생성을, 일반 HTTP는 한 번에 생성을 써서 전송 프로토콜 때문에 채팅 핵심 로직이 중복되지 않는다."
+    },
+    {
+      "title": "Engineering Memory — SSE 기본 전송과 WebSocket Fallback",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["SSE", "WebSocket", "JavaScript"],
+      "tags": ["frontend", "fallback", "streaming", "chat"],
+      "sourcePath": "docs/architecture.md",
+      "content": "프론트엔드의 기본 채팅 전송 방식은 SSE다. 화면 하단의 전송 버튼으로 WebSocket으로 바꿀 수 있고, WebSocket 연결이 실패하면 자동으로 SSE로 전환한다. 두 방식은 백엔드에서 같은 ChatOrchestrator를 쓰므로 프로토콜이 바뀌어도 답변 상태와 근거 처리 규칙이 같다. WebSocket은 같은 출처만 허용하며, HTTPS 뒤에서는 X-Forwarded-Proto가 https로 전달되어야 같은 출처 검사를 통과한다."
+    },
+    {
+      "title": "Engineering Memory — Go Gateway의 SSE·WebSocket 프록시 역할",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Go", "SSE", "WebSocket", "Reverse Proxy"],
+      "tags": ["gateway", "proxy", "request-id", "rate-limit", "timeout"],
+      "sourcePath": "gateway/internal/router/router.go",
+      "content": "Go Gateway는 채팅 비즈니스 로직이나 WebSocket 메시지 계약을 직접 구현하지 않고 Spring 백엔드로 프록시한다. 경로에 따라 일반 프록시(30초), 느린 요청용 프록시(일반 채팅·문서 등록·재색인 240초), SSE 스트림(360초), WebSocket 프록시(연결 30분)를 고른다. /api·/healthz·/readyz 밖의 경로는 백엔드로 보내지 않고 404로 답한다. 모든 요청에 request-id를 붙이고, /api/chat/* 경로에는 IP 기반 요청 제한을 적용한다. SSE 응답은 즉시 flush하고 X-Accel-Buffering: no를 붙인다. /healthz는 gateway 생존, /readyz는 백엔드 준비 상태를 확인한다."
+    },
+    {
+      "title": "Engineering Memory — 채팅을 색인보다 우선하는 ModelWorkloadGate",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Java", "Ollama", "GPU"],
+      "tags": ["concurrency", "gpu", "indexing", "chat", "workload-gate"],
+      "sourcePath": "backend/src/main/java/com/engineeringmemory/llm/workload/ModelWorkloadGate.java",
+      "content": "ModelWorkloadGate는 진행 중인 채팅 수를 세고 상한(기본 50)을 넘으면 새 채팅을 기다리게 하지 않고 즉시 MODEL_BUSY로 거절한다. 배경 색인은 임베딩 배치를 보내기 전마다 채팅이 없을 때까지 양보한다. 채팅이 계속 이어지면 backgroundYieldTimeout(기본 30초)까지만 기다린 뒤 색인을 진행해 Knowledge 색인이 영원히 밀리지 않게 한다. 단일 GPU 환경에서 사용자 채팅 지연을 우선하면서 배경 작업의 기아(starvation)를 막기 위한 설계다."
+    },
+    {
+      "title": "Engineering Memory — Local과 Docker 실행 환경 주소 분리",
       "documentType": "TROUBLESHOOTING",
       "projects": ["engineering-memory"],
-      "technologies": ["PostgreSQL", "Docker", "Spring Boot"],
-      "tags": ["스키마", "마이그레이션", "운영"],
+      "technologies": ["Docker", "Spring Boot", "PostgreSQL", "Ollama"],
+      "tags": ["localhost", "env", "profile", "docker-compose", "network"],
       "sourcePath": "docs/troubleshooting.md",
-      "content": "Hibernate ddl-auto는 none이다. Docker의 /docker-entrypoint-initdb.d에 있는 schema.sql은 PostgreSQL 볼륨을 처음 만들 때만 실행된다. 기존 볼륨에서 schema.sql을 고쳐도 테이블이 자동 변경되지 않는다. 필요한 SQL은 별도 적용해야 하며 마이그레이션 도구는 아직 없다. down -v는 계정·문서·대화·모델 볼륨을 지우므로 운영 자료가 있으면 사용하지 않는다."
+      "content": "로컬 백엔드와 Docker 백엔드에서 localhost의 의미가 달라 설정 혼선이 생길 수 있다. 로컬 백엔드는 호스트에 노출된 PostgreSQL(localhost:5432)과 Ollama(localhost:OLLAMA_PORT)에 접속하고, Docker 백엔드는 Compose 네트워크의 서비스 이름 postgres:5432와 ollama:11434를 쓴다. Compose는 backend 컨테이너의 DB_HOST·OLLAMA_BASE_URL을 내부 주소로 덮어쓴다. 호스트에 설치된 Ollama와 Docker Ollama가 동시에 떠 있으면 백엔드가 모델이 없는 쪽을 볼 수 있으므로 OLLAMA_PORT와 OLLAMA_BASE_URL 포트를 맞추고 그 인스턴스에 모델을 설치한다."
     },
     {
-      "title": "Go — 프로젝트에서 쓰는 언어·패키지 개요",
-      "documentType": "DOCUMENT",
-      "projects": [],
-      "technologies": ["Go"],
-      "tags": ["일반정보", "언어", "패키지"],
-      "sourceUri": "https://go.dev/doc/code",
-      "content": "Go 소스는 package 단위로 묶이고 관련 package는 module로 관리된다. go.mod는 module 경로를 선언하며 go 도구가 빌드·테스트·의존성 관리에 사용된다. 이 내용은 특정 프로젝트에서 Go를 채택한 이유가 아니라 Go 자체의 일반 개념이다."
+      "title": "Engineering Memory — Ollama Health와 모델 준비 상태는 다름",
+      "documentType": "TROUBLESHOOTING",
+      "projects": ["engineering-memory"],
+      "technologies": ["Docker", "Ollama"],
+      "tags": ["healthcheck", "model", "pull", "indexing", "troubleshooting"],
+      "sourcePath": "docs/phase1-baseline.md",
+      "content": "Ollama 컨테이너가 healthy라고 해서 필요한 임베딩·생성 모델까지 설치되어 있다는 뜻은 아니다. 임베딩 모델이 없으면 문서 등록은 되지만 비동기 색인에서 모델 호출이 실패해 FAILED가 된다. 백엔드의 /actuator/health와 gateway의 /readyz는 bge-m3와 exaone3.5:7.8b가 모두 설치되어야 UP이 된다. 공용 기본 지식 동기화도 임베딩 모델이 준비될 때까지 기다렸다가 진행한다. Compose 기동 시 모델 자동 pull은 아직 없어 docker compose exec ollama ollama pull로 직접 설치한다."
     },
     {
-      "title": "Go — 모듈과 go.mod",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Go"],
-      "tags": ["일반정보", "모듈", "의존성"],
-      "sourceUri": "https://go.dev/ref/mod",
-      "content": "Go module은 함께 버전 관리·배포되는 package 집합이다. 루트의 go.mod가 module 경로와 의존성을 정의한다. package는 같은 디렉터리의 소스 파일 묶음이다. gateway의 go.mod를 읽을 때 module 경로는 import 경로의 기준이고, Go 버전·의존성 선언은 빌드 재현성에 영향을 준다."
+      "title": "Engineering Memory — ddl-auto none과 Docker initdb 스키마 관리",
+      "documentType": "TROUBLESHOOTING",
+      "projects": ["engineering-memory"],
+      "technologies": ["Spring Boot", "Hibernate", "PostgreSQL", "Docker"],
+      "tags": ["schema", "ddl-auto", "initdb", "migration", "flyway"],
+      "sourcePath": "docs/troubleshooting.md",
+      "content": "백엔드는 spring.jpa.hibernate.ddl-auto=none이어서 애플리케이션이 DB 스키마를 바꾸지 않는다. schema.sql은 Docker의 /docker-entrypoint-initdb.d로 들어가 PostgreSQL 볼륨을 처음 만들 때만 실행된다. 그래서 기존 볼륨을 유지한 채 schema.sql만 고치면 실제 DB와 코드의 스키마가 어긋난다. schema.sql은 여러 번 실행해도 되도록 작성되어 있어 psql로 다시 적용하면 된다. docker compose down -v는 계정·문서·대화와 모델·인증서 볼륨까지 지우므로 운영 자료가 있으면 쓰지 않는다. 스키마 변경이 늘면 Flyway 같은 마이그레이션 도구 도입을 검토한다."
     },
     {
-      "title": "Go — context로 요청 취소 전파",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Go", "HTTP"],
-      "tags": ["일반정보", "context", "타임아웃"],
-      "sourceUri": "https://pkg.go.dev/context",
-      "content": "context.Context는 호출 경계에 걸쳐 deadline, 취소 신호, 요청 범위 값을 전달한다. 요청이 취소되면 파생 Context도 취소된다. WithTimeout/WithCancel이 반환한 cancel 함수는 작업 종료 시 호출해 관련 자원을 해제한다. HTTP gateway에서 백엔드 호출이 사용자 연결 종료 또는 제한 시간에 맞춰 중단되도록 할 때 사용한다."
+      "title": "Engineering Memory — Markdown Knowledge 등록·검색 검증",
+      "documentType": "EXPERIMENT",
+      "projects": ["engineering-memory"],
+      "technologies": ["Markdown", "RAG", "pgvector"],
+      "tags": ["markdown", "ingestion", "heading", "retrieval", "phase1"],
+      "sourcePath": "docs/phase1-baseline.md",
+      "content": "Markdown 문서를 등록해 제목과 본문을 나누고 Chunking, Embedding, pgvector 저장, Vector Search, RAG Context, 근거 기반 답변까지 동작하는 것을 확인했다. 여러 문서의 청크를 함께 근거로 쓰는 답변도 확인했다. 남은 문제는 답변에 Markdown 기호가 그대로 보이는 것이다. 프론트엔드가 답변을 평문으로 표시하고, 시스템 프롬프트는 마크다운을 쓰지 말라고 지시하지만 모델이 따르지 않는 경우가 있다. 렌더링 도입과 프롬프트 준수 강화 중 결정이 필요하다."
     },
     {
-      "title": "Go — httputil.ReverseProxy",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Go", "HTTP"],
-      "tags": ["일반정보", "프록시", "ReverseProxy"],
-      "sourceUri": "https://pkg.go.dev/net/http/httputil",
-      "content": "net/http/httputil.ReverseProxy는 들어온 HTTP 요청을 백엔드로 보내고 응답을 클라이언트에 복사한다. Rewrite에서 나가는 요청 URL·헤더를 조정하고, ModifyResponse에서 응답 헤더를 바꿀 수 있다. 프록시 오류는 ErrorHandler로 처리한다. 신뢰 프록시 헤더와 타임아웃 정책은 이 일반 API 위에 애플리케이션이 별도로 정해야 한다."
+      "title": "Engineering Memory — Similarity Threshold 수동 테스트 관찰",
+      "documentType": "EXPERIMENT",
+      "projects": ["engineering-memory"],
+      "technologies": ["Embedding", "pgvector", "RAG"],
+      "tags": ["similarity-threshold", "precision", "recall", "bge-m3", "benchmark"],
+      "sourcePath": "docs/phase1-baseline.md",
+      "content": "고정 평가 질문 없이 수동으로 질문해 본 관찰이다. 0.55에서는 근거를 거의 찾지 못했다. 0.50에서는 질문 단어가 문서와 비슷하면 유의미하게 찾았지만 놓치는 경우도 있었다. 0.40에서는 근거 문서 2개가 잡히고 두 문서 내용이 모두 답변에 들어갔으나, 두 문서 내용이 비슷해 정밀도가 떨어진 것인지는 판단하지 못했다. 0.30에서도 근거 문서 2개였다. 기본값은 0.45로 바꿨지만 최적값으로 확정한 것은 아니며 평가 세트로 다시 검증해야 한다."
     },
     {
-      "title": "Go — HTTP 응답 flush와 스트리밍",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Go", "HTTP", "SSE"],
-      "tags": ["일반정보", "Flusher", "스트리밍"],
-      "sourceUri": "https://pkg.go.dev/net/http#Flusher",
-      "content": "net/http.Flusher는 버퍼에 쌓인 응답을 클라이언트 쪽으로 내보내는 인터페이스다. ResponseWriter 래퍼가 Flusher를 지원하지 않을 수 있으므로 사용 전 확인해야 한다. Flush를 호출해도 중간 HTTP 프록시가 버퍼링하면 사용자에게 즉시 도착하지 않을 수 있다. SSE는 애플리케이션뿐 아니라 프록시 설정까지 함께 확인한다."
+      "title": "Engineering Memory — 한국어·영어 Cross-lingual Retrieval 한계 관찰",
+      "documentType": "EXPERIMENT",
+      "projects": ["engineering-memory"],
+      "technologies": ["bge-m3", "Embedding", "RAG"],
+      "tags": ["cross-lingual", "korean", "english", "retrieval", "embedding"],
+      "sourcePath": "docs/phase1-baseline.md",
+      "content": "소규모 수동 검색에서 영어와 한국어가 뜻이 같아도 표면 단어가 다르면 유사도가 충분히 오르지 않는 것으로 보이는 사례가 있었다. 엄밀한 벤치마크 결과는 아니다. 이후 모델 비교에서는 한국어 질의→한국어 문서, 영어→영어뿐 아니라 한국어 질의→영어 문서, 영어 질의→한국어 문서, 한영 혼합 기술 질문을 따로 평가한다."
     },
     {
-      "title": "Go — goroutine과 channel 기본",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Go"],
-      "tags": ["일반정보", "동시성", "goroutine", "channel"],
-      "sourceUri": "https://go.dev/doc/effective_go#concurrency",
-      "content": "go 키워드로 함수를 goroutine에서 실행한다. channel은 goroutine 사이 값 전달과 동기화에 사용할 수 있고, 버퍼 없는 channel의 송수신은 서로를 기다린다. 동시 작업 수를 무제한 늘리면 자원이 고갈될 수 있으므로 버퍼·세마포어·고정 작업자 수 등으로 상한을 둔다. 특정 gateway가 이런 기법을 사용한다는 뜻은 아니다."
+      "title": "Engineering Memory — 초기 Knowledge Cold Start 해결 방향",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["RAG", "GitHub"],
+      "tags": ["knowledge", "cold-start", "chat-history", "pr", "candidate"],
+      "sourcePath": "docs/phase2-plan.md",
+      "content": "RAG 파이프라인이 동작해도 등록된 Knowledge가 적으면 답할 수 있는 범위가 좁다. 현재는 범용 기술 문서 336건을 owner 없는 공용 자료로 기동 시 자동 등록하고, 프로젝트·경험·학습 기록은 개인 초기 자료로 등록 스크립트를 통해 넣는다. 앞으로 대화 기록, GitHub PR·Issue·Commit, 프로젝트 문서, 트러블슈팅, 설계 결정, 실험·벤치마크, 학습 메모를 더 확보하고, 장기적으로 Raw Source → Knowledge Candidate → 구조화 → 사용자 확인 → Knowledge 등록 → Chunk/Embedding 흐름을 고려한다."
     },
     {
-      "title": "Spring Security — 세션과 CSRF 기본",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Spring Security", "HTTP"],
-      "tags": ["일반정보", "세션", "CSRF"],
-      "sourceUri": "https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html",
-      "content": "브라우저가 세션 쿠키를 자동 전송하는 인증 방식에서는 변경 요청을 위조하는 CSRF를 고려해야 한다. Spring Security는 서블릿 앱의 CSRF 보호를 제공하며 SPA는 토큰 전달 방식을 맞춰야 한다. 이 프로젝트는 XSRF-TOKEN 쿠키 값을 X-XSRF-TOKEN 헤더로 보내지만, 그 구현 계약은 별도 프로젝트 API 문서에서 확인한다."
+      "title": "Engineering Memory — Knowledge Category와 입력 Template 설계 방향",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["RAG", "Metadata"],
+      "tags": ["category", "template", "troubleshooting", "decision", "note"],
+      "sourcePath": "docs/phase2-plan.md",
+      "content": "Phase 2에서는 TROUBLESHOOTING, DECISION, PROJECT, REFERENCE, EXPERIMENT, NOTE, UNCLASSIFIED 같은 상위 Category를 검토한다. Docker·Spring Boot 같은 값은 Category가 아니라 Technology 메타데이터로 둔다. 이미 documentType 11종이 분류와 채팅 범위 필터 역할을 하므로, documentType을 Category로 정리할지(A안) 별도 필드로 둘지(B안) 먼저 정해야 한다. 어느 쪽이든 임베딩 입력에 자료 유형이 들어가므로 재색인이 필요하다. TROUBLESHOOTING은 증상·원인·해결·확인·재발 방지, DECISION은 문제·선택·대안·이유·Trade-off처럼 카테고리별 입력 양식을 두는 방향이다. 아직 구현 전 설계 방향이다."
     },
     {
-      "title": "pgvector — 정확 검색과 근사 인덱스",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["PostgreSQL", "pgvector"],
-      "tags": ["일반정보", "벡터검색", "인덱스"],
-      "sourceUri": "https://github.com/pgvector/pgvector#querying",
-      "content": "pgvector는 PostgreSQL에서 벡터를 저장하고 거리 연산자로 가까운 항목을 찾는다. 기본은 정확한 최근접 검색이다. HNSW·IVFFlat 같은 근사 인덱스는 속도와 재현율 사이의 선택이며, 필터 조건과 결합할 때 결과 수·검색 품질을 확인해야 한다. 이 프로젝트는 개인 규모 데이터의 정확도를 우선해 현재 exact scan을 사용한다."
+      "title": "Engineering Memory — Chat Search Scope와 Fallback Retrieval 설계 방향",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["RAG", "pgvector"],
+      "tags": ["search-scope", "category", "fallback", "threshold", "retrieval"],
+      "sourcePath": "docs/phase2-plan.md",
+      "content": "프로젝트·기술·자료 유형·기간으로 채팅 검색 범위를 좁히는 기능은 이미 구현되어 있고, 범위 안에 근거가 없으면 NO_CONTEXT로 답한다. Phase 2에서는 전체, 장애·해결, 기술 결정, 프로젝트, Reference, 실험, 메모 같은 Category 범위와 질문을 보고 범위를 정하는 AUTO를 검토한다. Category를 완전한 hard partition으로 쓰지 않고, 결과가 부족하면 전체나 UNCLASSIFIED까지 범위를 넓히며 후보 수 증가나 threshold 완화도 실험한다. 아직 구현 전 설계 방향이다."
     },
     {
-      "title": "nginx — proxy_buffering과 실시간 응답",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["nginx", "SSE"],
-      "tags": ["일반정보", "프록시", "버퍼링"],
-      "sourceUri": "https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering",
-      "content": "nginx의 proxy_buffering은 프록시 응답을 버퍼에 받아 두는 기능이며 기본값은 on이다. 실시간 응답은 버퍼링이 켜져 있으면 작은 조각이 한꺼번에 보일 수 있다. SSE 경로에서는 버퍼링을 끄고, 애플리케이션·gateway에서도 적절히 flush하는지 확인한다. 중간에 다른 프록시가 있다면 그 계층의 버퍼링도 별도로 점검한다."
+      "title": "Engineering Memory — Generation Model GENERAL·HARD 이중 라우팅 방향",
+      "documentType": "DECISION",
+      "projects": ["engineering-memory"],
+      "technologies": ["LLM", "Ollama", "RAG"],
+      "tags": ["model-routing", "general", "hard", "generation", "ai-profile"],
+      "sourcePath": "docs/phase2-plan.md",
+      "content": "임베딩 모델은 우선 공통 모델 하나를 쓰고, 생성 모델은 GENERAL과 HARD 두 단계로 나누는 방향을 검토한다. GENERAL은 단순 조회·단일 문서 질문·요약, HARD는 여러 문서 종합·복잡한 원인 분석·설계 비교·Trade-off 분석에 쓴다. Category와 모델을 1:1로 고정하지 않고 질문 복잡도로 라우팅하며, 처음에는 규칙 기반으로 시작한다. 로드맵상 Phase 3 성격이며 Phase 2에서는 설계와 시범 적용까지만 한다."
     },
     {
-      "title": "Docker Compose — .env와 컨테이너 환경변수",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Docker Compose"],
-      "tags": ["일반정보", "환경변수", "설정"],
-      "sourceUri": "https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/",
-      "content": "Compose의 .env는 compose 파일의 ${VAR} 치환에 사용된다. 이것만으로 모든 값이 컨테이너 내부 환경변수가 되는 것은 아니며, service의 environment 또는 env_file 설정을 구분해야 한다. 셸 변수와 --env-file도 치환 우선순위에 영향을 준다. 실제 비밀번호 값을 지식 문서에 복사하지 말고 변수 이름·역할만 기록한다."
+      "title": "Engineering Memory — Retrieval 성공과 답변 정확성은 별도 문제",
+      "documentType": "NOTE",
+      "projects": ["engineering-memory"],
+      "technologies": ["RAG", "LLM"],
+      "tags": ["grounding", "faithfulness", "threshold", "hallucination"],
+      "sourcePath": "docs/phase2-plan.md",
+      "content": "관련 문서를 검색해 와도 생성 모델이 근거를 잘못 해석하면 기술적으로 틀린 답변이 나올 수 있다. 그래서 평가에서는 정답 문서가 Top-K에 들어오는지(검색)와 가져온 근거를 충실하게 해석하는지(생성)를 나눠 본다. 근거에 없는 프로젝트 설정 의미를 일반 지식으로 추측해 현재 구현 사실처럼 말하지 않도록 프롬프트와 평가 케이스를 강화할 필요가 있다."
     },
     {
-      "title": "Ollama — 임베딩과 생성 API",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Ollama"],
-      "tags": ["일반정보", "임베딩", "생성", "스트리밍"],
-      "sourceUri": "https://github.com/ollama/ollama/blob/main/docs/api.md",
-      "content": "Ollama의 /api/embed는 입력 텍스트의 임베딩을 만들고 /api/generate는 프롬프트로 답변을 생성한다. generate는 기본적으로 스트리밍 응답을 보낼 수 있고 stream:false로 단일 응답을 요청할 수 있다. 모델 이름과 옵션은 호출별로 전달한다. 모델이 서버에 설치되어 있는지와 API 응답 형식은 운영 시 별도로 확인해야 한다."
+      "title": "Engineering Memory — Timeout은 바깥 계층이 안쪽 계층보다 길게 설정",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["nginx", "Go", "Spring Boot", "Ollama"],
+      "tags": ["timeout", "gateway", "nginx", "streaming"],
+      "sourcePath": "docs/architecture.md",
+      "content": "Timeout은 안쪽 계층이 먼저 끝나고 바깥 계층이 결과를 전달할 수 있도록 바깥쪽을 더 길게 잡는다. 일반 채팅은 Ollama read 180초, gateway slow 240초, nginx 300초다. SSE는 백엔드 emitter 300초, gateway 360초, nginx 420초다. WebSocket은 백엔드 idle 600초, gateway 연결 수명 30분, nginx 2100초다. 맨 앞의 Caddy는 기본 설정이라 응답 대기 제한을 두지 않고 SSE를 즉시 전달한다."
     },
     {
-      "title": "Java 21 — record 데이터 운반 객체",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Java"],
-      "tags": ["일반정보", "record", "DTO"],
-      "sourceUri": "https://docs.oracle.com/en/java/javase/21/language/records.html",
-      "content": "Java record는 고정된 구성요소를 가진 데이터 운반 클래스를 간결하게 선언한다. 구성요소 접근자, 생성자, equals·hashCode·toString이 자동 생성된다. 필드는 final이지만 내부에 가변 객체를 담으면 깊은 불변성이 보장되는 것은 아니다. 요청·응답 DTO에 쓸 때 입력 검증과 도메인 불변식은 별도로 설계해야 한다."
+      "title": "Engineering Memory — 요청 제한과 모델 In-flight 제한은 별도 제어",
+      "documentType": "PROJECT_DOC",
+      "projects": ["engineering-memory"],
+      "technologies": ["Go", "Spring Boot"],
+      "tags": ["rate-limit", "in-flight", "traffic", "chat"],
+      "sourcePath": "docs/architecture.md",
+      "content": "gateway는 /api/chat/* 요청에 IP별 토큰 버킷(버스트 120, 1초에 1개 충전)을, 백엔드는 채팅(버스트 10, 6초에 1개)과 로그인(버스트 5, 60초에 1개)에 IP별 제한을 각각 적용한다. 실제 모델 호출에는 별도로 동시 채팅 상한 50을 둔다. HTTP 요청 수 제한은 과도한 요청 유입을 막고, 모델 in-flight 제한은 GPU·모델의 동시 처리량을 지킨다. 목적이 다르다. IP 기준 제한은 Caddy·nginx가 실제 클라이언트 IP를 전달할 때만 사용자별로 동작한다."
     },
     {
-      "title": "Spring Boot — 프로파일별 설정",
-      "documentType": "TECH_DOC",
+      "title": "JDBC·MyBatis·JPA — DB 접근 방식의 핵심 차이",
+      "documentType": "NOTE",
       "projects": [],
-      "technologies": ["Spring Boot"],
-      "tags": ["일반정보", "프로파일", "설정"],
-      "sourceUri": "https://docs.spring.io/spring-boot/reference/features/profiles.html",
-      "content": "Spring Boot 프로파일은 환경별 Bean과 설정을 구분한다. application-{profile}.yml 같은 프로파일별 파일을 사용할 수 있고 활성 프로파일에 맞춰 적용된다. 공통 설정과 환경 전용 설정을 분리하되, 비밀값을 저장소의 설정 파일에 직접 넣지 않는다. 이 프로젝트의 local·docker·prod 설정값은 별도 프로젝트 문서에서 확인한다."
+      "technologies": ["JDBC", "MyBatis", "JPA"],
+      "tags": ["학습노트", "DB접근", "비교"],
+      "sourceUri": "https://docs.oracle.com/javase/tutorial/jdbc/basics/",
+      "content": "학습 관점에서 JDBC는 Connection, Statement, ResultSet과 SQL 실행을 직접 다루는 기본 API다. MyBatis는 SQL을 개발자가 작성하면서 파라미터와 결과 매핑 등 반복 JDBC 작업을 프레임워크에 맡기는 SQL Mapper다. JPA는 엔티티와 영속성 컨텍스트를 중심으로 객체 상태를 관리하는 ORM 표준이다. 순수 추상화 계층의 오버헤드만으로 성능을 단정하기보다 실제 SQL 수, DB 왕복, 인덱스, 조인, 배치, N+1 같은 쿼리 패턴을 함께 확인해야 한다."
     },
     {
-      "title": "Spring Boot — Actuator health endpoint",
-      "documentType": "TECH_DOC",
+      "title": "Java Generics — List<T> 타입 안정성과 DTO 타입 불일치",
+      "documentType": "TROUBLESHOOTING",
       "projects": [],
-      "technologies": ["Spring Boot", "Actuator"],
-      "tags": ["일반정보", "헬스체크", "운영"],
-      "sourceUri": "https://docs.spring.io/spring-boot/reference/actuator/monitoring.html",
-      "content": "Spring Boot Actuator는 활성화된 관리 endpoint를 HTTP로 노출할 수 있으며 health는 기본적으로 /actuator/health 경로를 사용한다. 헬스 응답은 애플리케이션 및 의존 서비스의 준비 상태를 판단하는 데 쓴다. 단순 프로세스 생존과 DB·모델까지 사용할 수 있는 준비 상태는 운영에서 구분해야 한다."
+      "technologies": ["Java", "Generics", "Collections"],
+      "tags": ["타입오류", "List", "DTO", "컴파일오류"],
+      "sourceUri": "https://docs.oracle.com/javase/tutorial/java/generics/why.html",
+      "content": "제네릭은 컬렉션에 들어갈 타입을 컴파일 시점에 제한해 타입 안정성을 제공한다. List<Book>에는 Book 타입을 넣어야 하므로 BookDto를 add할 수 없고, List<Book>을 List<BookDto>로 반환할 수도 없다. DAO의 반환 타입, 지역 리스트 타입, 생성하는 객체 타입을 하나의 모델 타입으로 일관되게 맞춰야 한다. Unresolved compilation problems가 런타임에서 보이더라도 먼저 Eclipse의 컴파일 오류를 제거해야 한다."
     },
     {
-      "title": "Spring MVC — SseEmitter 비동기 응답",
-      "documentType": "TECH_DOC",
+      "title": "HTML form 오타 — submit 요청이 Servlet까지 도달하지 않는 문제",
+      "documentType": "TROUBLESHOOTING",
       "projects": [],
-      "technologies": ["Spring MVC", "SSE"],
-      "tags": ["일반정보", "SseEmitter", "스트리밍"],
-      "sourceUri": "https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html",
-      "content": "Spring MVC의 SseEmitter는 컨트롤러가 HTTP 연결을 유지하며 서버 이벤트를 비동기로 전송하게 한다. 이벤트 전송 중 오류·타임아웃·클라이언트 연결 종료를 처리하고 완료 시 emitter를 정리해야 한다. 애플리케이션에서 이벤트를 즉시 보내더라도 중간 프록시 버퍼링과 타임아웃은 별도로 맞춰야 한다."
+      "technologies": ["HTML", "Jakarta Servlet"],
+      "tags": ["form", "submit", "오타", "요청미도달"],
+      "sourceUri": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/form",
+      "content": "수정 버튼을 눌러도 Servlet의 doPost 로그가 전혀 찍히지 않는다면 DB나 DAO보다 먼저 브라우저가 실제 HTTP 요청을 만들었는지 확인해야 한다. 실제 학습 과정에서는 <form>을 <from>으로 잘못 작성해 submit 버튼이 form 제출을 수행하지 않았고, <a href> 기반 삭제 요청만 정상 동작했다. form의 시작·종료 태그, action, method, submit 버튼 위치와 type을 확인하고 브라우저 개발자 도구 Network 탭으로 요청 생성 여부를 확인하면 원인을 빠르게 분리할 수 있다."
     },
     {
-      "title": "Spring Security — 세션 인증 지속",
-      "documentType": "TECH_DOC",
+      "title": "Tomcat JNDI 장애 — Connection이 null인 상태에서 prepareStatement 호출",
+      "documentType": "TROUBLESHOOTING",
       "projects": [],
-      "technologies": ["Spring Security"],
-      "tags": ["일반정보", "세션", "인증"],
-      "sourceUri": "https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html",
-      "content": "Spring Security는 인증 결과를 SecurityContext로 다룬다. 세션 기반 앱에서는 이 컨텍스트가 다음 요청에도 복원되도록 저장소와 세션 정책을 설정한다. 커스텀 로그인 처리에서는 인증 성공 후 컨텍스트 저장이 필요한지 확인해야 한다. 세션 쿠키 보호와 CSRF는 함께 검토하지만 서로 다른 문제다."
+      "technologies": ["Apache Tomcat", "JNDI", "JDBC", "DataSource"],
+      "tags": ["ConnectionPool", "NullPointerException", "JNDI", "디버깅"],
+      "sourceUri": "https://tomcat.apache.org/tomcat-10.1-doc/jndi-resources-howto.html",
+      "content": "DAO에서 con.prepareStatement 호출 시 con이 null이라면 prepareStatement 자체보다 Connection 획득 단계의 실패를 먼저 조사해야 한다. JNDI DataSource 방식에서는 Resource 이름과 lookup 경로, JDBC 드라이버, URL, 계정·권한을 확인한다. getConnection 내부에서 예외를 printStackTrace만 하고 null을 반환하면 후속 NPE가 실제 원인을 가리므로, 연결 실패를 RuntimeException이나 SQLException 형태로 즉시 전달해 root cause를 보존하는 방식이 디버깅에 유리하다."
     },
     {
-      "title": "Spring WebSocket — TextWebSocketHandler",
-      "documentType": "TECH_DOC",
+      "title": "Tomcat 실행 장애 — org.apache.catalina.startup.Bootstrap을 찾지 못하는 경우",
+      "documentType": "TROUBLESHOOTING",
       "projects": [],
-      "technologies": ["Spring Framework", "WebSocket"],
-      "tags": ["일반정보", "WebSocketHandler", "동시전송"],
-      "sourceUri": "https://docs.spring.io/spring-framework/reference/web/websocket/server.html",
-      "content": "Spring Framework는 WebSocketHandler 또는 TextWebSocketHandler로 메시지 기반 연결을 처리한다. 핸들러를 경로에 등록하고 수신·종료·오류를 관리한다. 표준 WebSocket 세션은 동시 전송을 허용하지 않으므로 여러 작업이 한 세션에 쓸 수 있다면 전송을 직렬화하거나 적절한 데코레이터를 사용해야 한다."
+      "technologies": ["Apache Tomcat", "Eclipse"],
+      "tags": ["Bootstrap", "classpath", "Runtime", "서버실행"],
+      "sourceUri": "https://tomcat.apache.org/tomcat-10.1-doc/class-loader-howto.html",
+      "content": "Tomcat 표준 시작 과정에서 CATALINA_HOME/bin/bootstrap.jar는 서버를 초기화하는 main 메서드와 관련 클래스 로더 구현을 제공한다. org.apache.catalina.startup.Bootstrap을 찾지 못한다는 메시지는 애플리케이션 Servlet 코드보다 Tomcat 설치 경로, Eclipse Server Runtime, 실행 classpath가 잘못 연결된 상황을 먼저 의심해야 한다. bootstrap.jar가 실제 설치 폴더에 있어도 IDE가 다른 Tomcat 경로나 잘못된 Runtime 구성을 참조하면 같은 문제가 발생할 수 있다."
     },
     {
-      "title": "PostgreSQL 17 — JSONB와 GIN 인덱스",
-      "documentType": "TECH_DOC",
+      "title": "Tomcat 포트 장애 — HTTP 요청을 shutdown 포트로 보낸 경우",
+      "documentType": "TROUBLESHOOTING",
       "projects": [],
-      "technologies": ["PostgreSQL"],
-      "tags": ["일반정보", "JSONB", "GIN", "메타데이터"],
-      "sourceUri": "https://www.postgresql.org/docs/17/datatype-json.html",
-      "content": "PostgreSQL의 jsonb는 JSON 값을 분해된 형식으로 저장하며 검색 연산과 인덱싱을 지원한다. GIN 인덱스는 포함·존재 조건 등 jsonb 연산의 검색에 사용할 수 있다. 입력 순서와 공백이 보존되지 않으므로 원문 보관용 텍스트와 검색용 JSONB의 역할을 구분한다. 배열 메타데이터의 실제 인덱스와 조회 SQL은 프로젝트 스키마를 확인한다."
+      "technologies": ["Apache Tomcat", "HTTP"],
+      "tags": ["포트", "shutdown", "8005", "8080"],
+      "sourceUri": "https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/catalina/Server.html",
+      "content": "Tomcat의 Server shutdown 포트는 HTTP 페이지를 제공하는 Connector 포트와 역할이 다르다. shutdown 포트는 수신한 첫 줄을 설정된 종료 명령 문자열과 비교하는 용도이므로 브라우저의 GET 요청을 이 포트로 보내면 유효하지 않은 shutdown 명령 경고가 발생할 수 있다. 웹 요청은 HTTP Connector가 리슨하는 포트로 보내야 한다. 서버 설정에서 포트 번호의 역할을 구분하고 브라우저 URL과 Connector 포트를 일치시켜야 한다."
     },
     {
-      "title": "PostgreSQL 17 — 행 잠금과 동시 수정",
-      "documentType": "TECH_DOC",
+      "title": "Servlet 디버깅 — 요청이 서버에 도달했는지 먼저 확인하기",
+      "documentType": "NOTE",
       "projects": [],
-      "technologies": ["PostgreSQL"],
-      "tags": ["일반정보", "행잠금", "트랜잭션", "동시성"],
-      "sourceUri": "https://www.postgresql.org/docs/17/explicit-locking.html",
-      "content": "PostgreSQL의 행 수준 잠금은 같은 행을 동시에 변경하려는 트랜잭션을 조정한다. SELECT FOR UPDATE처럼 잠금을 명시할 수 있으며, 잠금 획득 순서가 엇갈리면 교착 상태가 발생할 수 있다. 문서 버전 교체나 대화 순서 부여처럼 하나의 행에 직렬화가 필요한 작업은 트랜잭션 범위와 잠금 시간을 함께 설계한다."
+      "technologies": ["Jakarta Servlet", "HTTP", "HTML"],
+      "tags": ["학습노트", "디버깅", "Network", "로그"],
+      "sourceUri": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/form",
+      "content": "버튼이 동작하지 않을 때는 DB나 DAO부터 보지 말고 요청 경로를 단계적으로 확인하는 것이 효율적이다. Servlet의 doGet/doPost 진입 로그와 request.getRequestURI를 출력하고 브라우저 개발자 도구 Network 탭에서 요청이 실제 생성됐는지 확인한다. 요청 자체가 없으면 form·button·JavaScript 문제, URL이 틀리면 action·context path 문제, Servlet까지 도달한 뒤 500이 나면 파라미터·DAO·DB 문제로 범위를 줄일 수 있다."
     },
     {
-      "title": "Docker — 볼륨의 데이터 수명",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Docker"],
-      "tags": ["일반정보", "볼륨", "영속성", "백업"],
-      "sourceUri": "https://docs.docker.com/engine/storage/volumes/",
-      "content": "Docker 볼륨의 데이터는 컨테이너의 쓰기 계층과 별도로 유지된다. 컨테이너를 재생성해도 볼륨이 남아 있으면 DB·모델 파일을 다시 사용할 수 있다. 반대로 볼륨 삭제는 데이터 손실을 의미하므로 운영 중에는 백업·복구 절차를 먼저 정해야 한다. Compose의 down -v처럼 볼륨을 지우는 명령은 주의한다."
+      "title": "UBot-BE — Nginx Reverse Proxy 작업 브랜치 구성",
+      "documentType": "NOTE",
+      "projects": ["UBot-BE"],
+      "technologies": ["Nginx", "Docker Compose", "Spring Boot"],
+      "tags": ["UBot-BE", "프로젝트경험", "리버스프록시"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/chore/60-nginx-reverse-proxy/infra/nginx/nginx.conf",
+      "content": "UBot-BE의 chore/60-nginx-reverse-proxy 작업 브랜치에서는 Nginx가 80 포트에서 요청을 받고 Docker Compose 서비스 이름 backend의 8080 포트로 전달하도록 구성했다. upstream backend에 backend:8080을 두고 기본 location에서 proxy_pass, forwarded header, proxy_read_timeout을 설정했다. 이 내용은 작업 브랜치 기준이며 develop 반영 여부와는 별도로 구분해서 봐야 한다."
     },
     {
-      "title": "Docker Compose — healthcheck 의존성",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Docker Compose"],
-      "tags": ["일반정보", "depends_on", "healthcheck", "기동"],
-      "sourceUri": "https://docs.docker.com/compose/how-tos/startup-order/",
-      "content": "Compose의 depends_on은 서비스 기동 순서를 정한다. 단순 시작 순서는 의존 서비스가 요청을 받을 준비가 됐다는 뜻이 아니다. healthcheck와 condition: service_healthy를 함께 쓰면 의존 서비스가 healthy가 될 때까지 후속 서비스를 기다리게 할 수 있다. 애플리케이션 자체의 재시도·readiness 확인도 별도로 필요하다."
+      "title": "UBot-BE — Backend 8080 직접 노출 제거 결정",
+      "documentType": "DECISION",
+      "projects": ["UBot-BE"],
+      "technologies": ["Docker Compose", "Nginx", "Spring Boot"],
+      "tags": ["UBot-BE", "프로젝트경험", "포트", "리버스프록시"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/chore/60-nginx-reverse-proxy/docker-compose.deploy.yml",
+      "content": "UBot-BE Nginx 작업에서는 외부 요청을 Nginx로 단일화하기 위해 backend의 호스트 포트 게시를 제거하고 expose 8080으로 바꾸는 방향을 선택했다. Nginx만 80:80을 호스트에 게시하고, Nginx에서 backend:8080으로 Docker 내부 네트워크를 통해 접근하도록 했다. 목적은 외부에서 Spring Boot 8080으로 직접 접근하는 경로를 없애고 리버스 프록시를 진입점으로 고정하는 것이다."
     },
     {
-      "title": "nginx — WebSocket 프록시 업그레이드",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["nginx", "WebSocket"],
-      "tags": ["일반정보", "Upgrade", "프록시"],
-      "sourceUri": "https://nginx.org/en/docs/http/websocket.html",
-      "content": "WebSocket 연결은 HTTP에서 프로토콜을 전환한다. Upgrade와 Connection은 hop-by-hop 헤더여서 nginx가 백엔드로 자동 전달하지 않으므로 프록시 설정에서 명시적으로 보낸다. 백엔드가 101 Switching Protocols를 반환해야 터널이 열린다. 장시간 연결에는 proxy_read_timeout과 ping 등 유휴 연결 정책도 맞춘다."
+      "title": "Docker Compose 트러블슈팅 — Nginx host not found in upstream",
+      "documentType": "TROUBLESHOOTING",
+      "projects": ["UBot-BE"],
+      "technologies": ["Docker", "Docker Compose", "Nginx"],
+      "tags": ["UBot-BE", "프로젝트경험", "DNS", "네트워크", "host-not-found"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://docs.docker.com/compose/how-tos/networking/",
+      "content": "증상은 Nginx가 시작 직후 host not found in upstream \"backend:8080\" 오류로 재시작을 반복하는 것이었다. backend 컨테이너가 실행 중이어도 Nginx와 backend가 같은 Compose 네트워크에 연결되어 있지 않으면 Docker 내부 DNS에서 backend 서비스 이름을 해석할 수 없다. 같은 Compose 파일 조합과 같은 프로젝트 컨텍스트로 backend와 nginx를 재생성해 동일 네트워크에 붙인 뒤 서비스 이름 backend로 통신하도록 복구할 수 있다. 이 문제에서 backend를 localhost:8080으로 바꾸면 안 된다. Nginx 컨테이너 내부의 localhost는 Nginx 컨테이너 자신을 의미한다."
     },
     {
-      "title": "Ollama — 모델 설치와 목록 확인",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Ollama"],
-      "tags": ["일반정보", "모델", "pull", "준비상태"],
-      "sourceUri": "https://docs.ollama.com/api/tags",
-      "content": "Ollama의 모델 목록 API는 서버에 설치된 모델을 확인하는 데 사용한다. 모델을 실행하려면 해당 Ollama 인스턴스에 모델이 있어야 하며, 필요한 모델은 pull로 준비한다. 프로세스가 살아 있거나 컨테이너 healthcheck가 통과했다는 사실만으로 특정 임베딩·생성 모델의 설치를 보장하지 않는다. 로컬과 Docker 인스턴스를 구분해 확인한다."
+      "title": "UBot-BE — 수동 CD 파이프라인 설계 결정",
+      "documentType": "DECISION",
+      "projects": ["UBot-BE"],
+      "technologies": ["GitHub Actions", "Docker", "Docker Compose", "SSH", "SCP"],
+      "tags": ["UBot-BE", "프로젝트경험", "수동CD", "배포설계"],
+      "occurredOn": "2026-09-21",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/issues/60",
+      "content": "UBot-BE 이슈 #60에서는 자동 push 배포 대신 workflow_dispatch로만 실행되는 수동 CD를 선택했다. 설계 흐름은 GitHub Actions Runner에서 Backend Docker image를 빌드하고 파일로 저장한 뒤 SCP로 EC2에 전달하고, EC2에서 docker load 후 Docker Compose로 backend를 교체하는 방식이다. 애플리케이션 비밀값은 이미지에 포함하지 않고 EC2의 .env와 GitHub Actions Secrets를 이용하는 방향으로 정리했다. 이 문서는 이슈에 기록된 설계 결정이며 실제 운영 배포 성공 여부를 의미하지 않는다."
     },
     {
-      "title": "SSE — event stream 형식",
-      "documentType": "DOCUMENT",
-      "projects": [],
-      "technologies": ["SSE", "HTTP"],
-      "tags": ["일반정보", "text/event-stream", "프로토콜"],
-      "sourceUri": "https://html.spec.whatwg.org/multipage/server-sent-events.html",
-      "content": "Server-Sent Events는 서버에서 클라이언트로 보내는 HTTP 이벤트 스트림이다. 응답 형식은 text/event-stream이며 UTF-8로 해석한다. event·data 같은 필드를 줄 단위로 보내고 빈 줄로 이벤트를 구분한다. 이 프로젝트는 POST 요청과 CSRF 헤더가 필요해 브라우저 EventSource 대신 fetch 응답 본문을 직접 읽는다."
+      "title": "UBot-BE — OpenAPI JWT Bearer 인증 구성",
+      "documentType": "NOTE",
+      "projects": ["UBot-BE"],
+      "technologies": ["Spring Boot", "springdoc-openapi", "JWT", "OpenAPI"],
+      "tags": ["UBot-BE", "프로젝트경험", "Swagger", "JWT"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/develop/src/main/java/com/ubot/common/OpenApiConfig.java",
+      "content": "UBot-BE의 develop 기준 OpenApiConfig는 bearerAuth라는 Security Scheme을 등록한다. HTTP bearer 방식과 JWT bearerFormat을 지정하고 전역 SecurityRequirement에 bearerAuth를 추가해 Swagger UI에서 JWT 인증을 사용할 수 있도록 구성되어 있다. API 문서 메타데이터로 UBot API, v1, UBot Backend API를 설정한다."
     },
     {
-      "title": "WebSocket — 양방향 연결 기본",
-      "documentType": "DOCUMENT",
-      "projects": [],
-      "technologies": ["WebSocket"],
-      "tags": ["일반정보", "양방향", "핸드셰이크"],
-      "sourceUri": "https://websockets.spec.whatwg.org/",
-      "content": "WebSocket은 웹 애플리케이션과 서버가 연결을 유지하며 양방향으로 메시지를 주고받는 API다. HTTP 업그레이드 핸드셰이크가 성공하면 연결 상태가 OPEN이 되고 send·message·close로 통신한다. 인증 쿠키와 Origin, 프록시 업그레이드, 유휴 타임아웃은 애플리케이션 운영에서 별도로 확인해야 한다."
+      "title": "UBot-BE 트러블슈팅 — HandlerExceptionResolver 다중 Bean 주입 충돌",
+      "documentType": "TROUBLESHOOTING",
+      "projects": ["UBot-BE"],
+      "technologies": ["Spring Boot", "Spring MVC", "Spring Security", "springdoc-openapi"],
+      "tags": ["UBot-BE", "프로젝트경험", "DI", "Qualifier", "HandlerExceptionResolver"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/pull/79",
+      "content": "Swagger 의존성 추가 후 애플리케이션 시작 과정에서 HandlerExceptionResolver 타입 후보가 errorAttributes와 handlerExceptionResolver 두 개로 인식되어 Security 컴포넌트 생성이 실패했다. 영향을 받은 클래스는 JwtAuthenticationFilter, JwtAccessDeniedHandler, JwtAuthenticationEntryPoint였다. 해결은 Lombok이 생성한 모호한 생성자 주입에 의존하지 않고 각 클래스의 생성자를 명시적으로 작성한 뒤 Spring의 @Qualifier(\"handlerExceptionResolver\")를 HandlerExceptionResolver 파라미터에 적용하는 방식이었다. 수정 후 develop 코드에도 해당 Qualifier 지정이 반영되어 있다."
     },
     {
-      "title": "Fetch API — 쿠키와 응답 스트림",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["JavaScript", "Fetch API"],
-      "tags": ["일반정보", "credentials", "ReadableStream"],
-      "sourceUri": "https://fetch.spec.whatwg.org/",
-      "content": "브라우저 fetch는 요청 메서드·헤더·credentials를 설정해 HTTP 요청을 보낸다. 같은 출처 세션 쿠키가 필요한 호출은 credentials 정책을 확인한다. 응답 본문은 스트림으로 읽을 수 있어 도착한 조각을 순서대로 처리할 수 있다. 조각 경계가 SSE 이벤트 경계와 같다고 가정하지 말고 버퍼에 모아 이벤트 구분자를 파싱한다."
+      "title": "UBot-BE — Swagger 문서 경로의 Spring Security 예외 처리",
+      "documentType": "NOTE",
+      "projects": ["UBot-BE"],
+      "technologies": ["Spring Security", "springdoc-openapi", "Swagger UI"],
+      "tags": ["UBot-BE", "프로젝트경험", "SecurityConfig", "Swagger"],
+      "occurredOn": "2026-09-23",
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/develop/src/main/java/com/ubot/auth/config/SecurityConfig.java",
+      "content": "UBot-BE의 develop 기준 SecurityConfig는 /v3/api-docs/**, /swagger-ui/**, /swagger-ui.html을 permitAll 대상에 포함한다. 인증과 권한이 필요한 실제 비즈니스 API 정책은 그대로 유지하면서 Swagger UI와 OpenAPI 문서 자체는 인증 없이 조회할 수 있게 한 구성이다. /admin/**는 ROLE_ADMIN을 요구하고 나머지 비공개 요청은 인증을 요구한다."
     },
     {
-      "title": "Gradle — Wrapper와 빌드 재현성",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Gradle", "Java"],
-      "tags": ["일반정보", "Wrapper", "빌드", "테스트"],
-      "sourceUri": "https://docs.gradle.org/current/userguide/gradle_wrapper.html",
-      "content": "Gradle Wrapper의 gradlew·gradlew.bat는 프로젝트에 선언된 Gradle 버전을 실행하고 필요하면 내려받는다. 개발자와 CI가 같은 버전으로 빌드할 수 있도록 Wrapper 파일을 버전 관리한다. 시스템에 설치된 gradle 명령보다 프로젝트 Wrapper를 우선 사용한다. 테스트 태스크 분리는 각 프로젝트의 build.gradle 설정을 확인한다."
+      "title": "UBot-BE PR #82 — 채팅 세션·SSE·재시도 기능 범위",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring Boot", "Spring MVC", "SSE", "PostgreSQL"],
+      "tags": ["채팅", "세션", "SSE", "재시도", "멱등성"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/pull/82",
+      "content": "PR #82는 로그인 사용자의 상담 세션 생성, 질문 입력, 질문 상태 조회, 실패 답변 재시도 API를 추가한다. 답변 생성은 기존 FAQ 검색과 LLM 서비스를 연결하며, 생성 상태와 최종 결과는 SSE로 전달한다. 서버가 질문 단위 멱등키를 생성하고 최초 시도를 포함해 최대 3회의 생성 시도를 관리한다. 질문, 참고 FAQ, 답변 생성 시도 기록을 저장하는 로직도 포함한다. 이 구현은 이전 대화 기억이나 토큰 단위 스트리밍보다는 현재 질문 한 건의 생성 상태와 재시도 제어에 초점을 둔다."
     },
     {
-      "title": "PDFBox — PDF 텍스트 추출의 한계",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Apache PDFBox", "PDF"],
-      "tags": ["일반정보", "PDF", "텍스트추출", "OCR"],
-      "sourceUri": "https://pdfbox.apache.org/3.0/faq.html",
-      "content": "PDFBox는 PDF에서 텍스트를 추출할 수 있지만 PDF는 본래 그래픽 형식이라 읽기 순서가 항상 보장되지 않는다. 스캔 이미지처럼 선택 가능한 문자가 없는 PDF는 텍스트 추출만으로 내용을 얻기 어렵고 OCR이 필요할 수 있다. 추출 결과가 비거나 순서가 어긋나면 파일 형식과 원본의 문자 포함 여부를 먼저 확인한다."
+      "title": "UBot-BE PR #82 — 신규 채팅 스키마가 Flyway에 적용되지 않은 상태",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["PostgreSQL", "Flyway", "Spring JDBC"],
+      "tags": ["DB스키마", "마이그레이션", "런타임오류", "리뷰포인트"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/docs/chat-mvp/README.md",
+      "content": "PR 문서는 chat_sessions, answer_attempts_history, question_log.session_id, question_log.llm_question 등 신규 채팅 구현이 요구하는 DB 구조가 현재 로컬 마이그레이션에 아직 없다고 명시한다. schema-proposal.sql은 검토용 파일이며 Flyway 자동 실행 경로에 추가되지 않았다. 따라서 Java 코드와 mock 기반 테스트가 통과하더라도 실제 DB에 해당 구조가 선행 적용되지 않으면 세션 생성이나 질문 저장 시점에 존재하지 않는 테이블 또는 컬럼을 참조해 런타임 실패가 발생할 수 있다. 병합 시에는 실제 Flyway migration을 이 PR에 포함하거나, 필요한 DB migration을 먼저 배포·병합하는 순서를 보장해야 한다."
     },
     {
-      "title": "Spring Data JPA — Repository 기본",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Spring Data JPA", "Jakarta Persistence"],
-      "tags": ["일반정보", "Repository", "DB"],
-      "sourceUri": "https://docs.spring.io/spring-data/jpa/reference/repositories/definition.html",
-      "content": "Spring Data JPA의 Repository 인터페이스는 엔티티와 ID 타입을 선언해 기본 CRUD 접근을 제공한다. 필요한 메서드만 노출하고, 검색 조건·트랜잭션 경계·owner 조건처럼 서비스의 불변식은 별도로 설계해야 한다. 인터페이스가 자동 구현된다는 사실이 모든 조회의 권한 검사를 대신하지는 않는다."
+      "title": "UBot-BE PR #82 — 채팅 DB 스키마 제안의 구조와 제약",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["PostgreSQL", "SQL"],
+      "tags": ["chat_sessions", "question_log", "answer_attempts_history", "유니크제약", "부분인덱스"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/docs/chat-mvp/schema-proposal.sql",
+      "content": "검토용 스키마는 chat_sessions 테이블을 추가하고 question_log에 llm_question과 session_id를 추가한다. answer_attempts_history는 질문별 생성 시도의 attempt_count, 상태, 모델명, 오류 정보, 생성 시각, idempotency_key를 저장한다. 시도 횟수는 1~3으로 제한하며 같은 질문의 동일 시도 번호 중복을 막는 UNIQUE 제약을 둔다. 또한 attempt_count=1인 멱등키에 대한 부분 UNIQUE 인덱스와, 질문별 PENDING 및 SUCCESS 상태를 하나로 제한하는 부분 UNIQUE 인덱스를 제안한다. 이 파일은 실제 migration이 아니라 검토안이므로 운영 스키마에 자동 반영되지 않는다."
     },
     {
-      "title": "Jakarta Validation — 요청 값 제약",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Jakarta Validation", "Java"],
-      "tags": ["일반정보", "요청검증", "NotBlank", "Size"],
-      "sourceUri": "https://jakarta.ee/specifications/bean-validation/3.1/",
-      "content": "Jakarta Validation은 객체·메서드 입력의 제약을 선언하고 검사하는 표준 API다. @NotBlank, @NotNull, @Size 같은 제약으로 요청의 형식과 크기를 검증할 수 있다. 입력 검증은 유효하지 않은 값을 거르는 단계이고, 소유자 권한·중복 문서·상태 전이 같은 도메인 규칙은 서비스 계층에서 별도로 확인해야 한다."
+      "title": "UBot-BE PR #82 — ChatMvpSessionRepository의 세션 저장 방식",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring JDBC", "PostgreSQL"],
+      "tags": ["repository", "chat_sessions", "RETURNING", "소유권검증"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/src/main/java/com/ubot/chat/mvp/repository/ChatMvpSessionRepository.java",
+      "content": "ChatMvpSessionRepository는 JdbcTemplate을 사용한다. 세션 생성 시 chat_sessions(user_id)에 INSERT한 뒤 PostgreSQL RETURNING으로 session_id와 created_at을 즉시 받아 ChatSessionResponse로 변환한다. 세션 소유권 확인은 session_id와 user_id 조건을 함께 사용하는 SELECT EXISTS로 수행한다. SQL 자체는 PostgreSQL의 RETURNING 사용 방식과 맞지만, chat_sessions 테이블이 실제 DB에 존재한다는 전제가 필요하다."
     },
     {
-      "title": "Lombok — RequiredArgsConstructor",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["Lombok", "Java"],
-      "tags": ["일반정보", "생성자", "의존성주입"],
-      "sourceUri": "https://projectlombok.org/features/constructor",
-      "content": "Lombok의 @RequiredArgsConstructor는 초기화되지 않은 final 필드와 일부 @NonNull 필드를 받는 생성자를 생성한다. Spring 컴포넌트에서 생성자 주입 코드를 줄일 수 있지만, 어떤 필드가 생성자 인자가 되는지 이해해야 한다. 생성된 코드는 컴파일 시 만들어지므로 IDE·빌드의 annotation processor 설정도 확인한다."
+      "title": "UBot-BE PR #82 — 서버 생성 멱등키와 질문별 최대 3회 재시도",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring", "PostgreSQL"],
+      "tags": ["멱등키", "재시도", "동시성", "상태관리"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/src/main/java/com/ubot/chat/mvp/service/ChatRecordService.java",
+      "content": "최초 질문 저장 후 사용자 ID, 저장된 질문 문자열, 최초 생성 시각을 기반으로 서버가 멱등키를 생성하고 첫 PENDING 시도를 만든다. 재시도 요청에서는 질문 행을 잠근 뒤 최신 시도의 멱등키와 클라이언트가 보낸 키가 같은지 확인한다. 기존 PENDING 시도가 시간 제한을 넘겼으면 FAIL로 만료시키고, 현재 시도가 PENDING 또는 SUCCESS이면 새 시도를 만들지 않는다. FAIL 상태가 재시도 가능한 오류이고 attempt_count가 3 미만일 때만 다음 시도를 생성한다. 따라서 같은 질문의 재시도는 최초 서버 키를 계속 재사용하며 총 실행 횟수는 최초 시도 포함 최대 3회다."
     },
     {
-      "title": "JUnit — 태그로 테스트 분리",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["JUnit", "Gradle"],
-      "tags": ["일반정보", "Tag", "단위테스트", "통합테스트"],
-      "sourceUri": "https://docs.junit.org/current/writing-tests/tagging-and-filtering.html",
-      "content": "JUnit의 @Tag는 테스트 클래스·메서드에 이름을 붙여 실행 시 포함하거나 제외할 수 있게 한다. 외부 DB·모델이 필요한 통합 테스트와 빠른 단위 테스트를 분리할 때 유용하다. 태그 자체가 환경을 준비해 주지는 않으므로 Gradle 태스크의 필터와 테스트 인프라 기동 조건을 함께 관리한다."
+      "title": "UBot-BE PR #82 — SSE 처리 상태와 작업 생명주기",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring MVC", "SSE", "Concurrency"],
+      "tags": ["SseEmitter", "processing", "completed", "failed", "heartbeat", "timeout"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/src/main/java/com/ubot/chat/mvp/service/ChatStreamService.java",
+      "content": "ChatStreamService는 SseEmitter로 processing, completed, failed 이벤트를 전달한다. 새 생성 작업은 제한된 작업 실행기에 제출되고 별도 타이머가 전체 생성 제한 시간을 관리한다. 15초 간격 heartbeat를 보내며, 타임아웃 시 작업을 취소하고 저장소에 timeout 실패를 기록하려고 시도한다. 클라이언트 연결이 끊겨도 emitter 전송만 중단하고 생성 작업 자체는 계속되어 결과를 DB에 기록할 수 있도록 설계했다. 이미 실행 중인 동일 재시도 요청은 새 작업을 만들지 않고 현재 processing 상태를 반환한 뒤 연결을 종료한다."
     },
     {
-      "title": "bge-m3 — 임베딩 모델 개요",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["bge-m3", "Ollama"],
-      "tags": ["일반정보", "임베딩", "다국어"],
-      "sourceUri": "https://ollama.com/library/bge-m3",
-      "content": "bge-m3는 BAAI의 다국어 텍스트 임베딩 모델이다. Ollama에서 pull한 뒤 /api/embed로 문장을 벡터로 만들 수 있다. 검색 시스템에서는 문서와 질문에 같은 임베딩 모델을 써야 비교 가능한 벡터 공간이 된다. 이 프로젝트의 1024차원 저장 설정과 모델 교체 후 재색인 절차는 별도 프로젝트 자료에서 확인한다."
+      "title": "UBot-BE PR #82 — 외부 AI 호출과 DB 트랜잭션 경계 분리",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Spring Transaction", "PostgreSQL", "LLM", "Vector Search"],
+      "tags": ["트랜잭션", "외부호출", "락", "응답저장"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/docs/chat-mvp/README.md",
+      "content": "채팅 MVP는 임베딩, FAQ 검색, LLM 호출 중에 DB 트랜잭션과 질문 행 잠금을 유지하지 않는 것을 설계 원칙으로 둔다. 성공 결과를 저장할 때는 답변 저장, FAQ 로그 저장, SUCCESS 상태 전환을 짧은 트랜잭션으로 묶는다. 외부 LLM 호출처럼 지연 시간이 길고 실패 가능성이 높은 작업을 DB 락을 보유한 채 실행하지 않아 락 점유 시간과 동시 요청 간 경합을 줄이려는 구조다. 또한 DB에 성공 결과가 확정 저장되지 않은 경우 completed 성공으로 알리지 않는 정책을 둔다."
     },
     {
-      "title": "exaone3.5 — 생성 모델 개요",
-      "documentType": "TECH_DOC",
-      "projects": [],
-      "technologies": ["exaone3.5", "Ollama"],
-      "tags": ["일반정보", "생성모델", "한국어"],
-      "sourceUri": "https://ollama.com/library/exaone3.5",
-      "content": "EXAONE 3.5는 LG AI Research가 공개한 한국어·영어 지시문 대응 생성 모델 계열이다. Ollama 라이브러리에는 여러 크기의 변형이 있으며 이 프로젝트는 exaone3.5:7.8b를 지정한다. 모델의 일반 능력과 별개로, 개인 지식 답변에는 검색된 근거만 전달하고 근거가 없을 때 생성하지 않는 애플리케이션 정책이 필요하다."
+      "title": "UBot-BE 기존 ChatService — FAQ 검색에서 LLM 답변 생성까지의 기존 흐름",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring", "Vector Search", "LLM"],
+      "tags": ["ChatService", "FAQ검색", "유사도임계값", "AI답변"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/54a91e7a65183811a53f4d660a200c8a50efd004/src/main/java/com/ubot/chat/service/ChatService.java",
+      "content": "PR #82 이전 develop의 ChatService는 질문 유효성 검사 후 FaqVectorService로 TOP-K FAQ를 검색하고, 가장 유사한 FAQ의 similarityScore가 임계값보다 낮으면 실패 응답을 반환한다. 임계값을 통과하면 원 질문과 FAQ 목록을 AiService.generateAnswer에 전달하고 PromptException 및 LlmException을 처리한다. 즉 FAQ 검색, 유사도 판정, LLM 답변 생성이라는 핵심 채팅 파이프라인이 기존 chat 도메인에 이미 존재한다."
+    },
+    {
+      "title": "UBot-BE PR #82 — com.ubot.chat.mvp 별도 패키지 도입에 따른 구조 분리",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["Java", "Spring Boot"],
+      "tags": ["패키지구조", "mvp", "채팅도메인", "리뷰포인트"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/pull/82/files",
+      "content": "PR #82는 신규 채팅 기능의 controller, dto, exception, repository, service, config, domain 코드를 기존 com.ubot.chat.controller, service, dto, exception 계층에 직접 통합하지 않고 com.ubot.chat.mvp 아래에 별도 구성한다. 실험성 코드의 격리 목적이라면 가능한 선택이지만, 실제 서비스 기능으로 장기 유지할 경우 기존 chat 도메인과 신규 mvp 도메인이 병존한다. 특히 동일한 채팅 유스케이스에 대해 서비스와 예외 모델이 두 갈래로 유지되면 정책 변경 시 수정 지점이 늘고 구현 간 동작 차이가 생길 수 있으므로 병합 전 패키지 경계와 장기 소유 구조를 명확히 정하는 것이 필요하다."
+    },
+    {
+      "title": "UBot-BE PR #82 — 신규 채팅 테스트가 실제 신규 스키마 검증을 대신하지 않는다는 한계",
+      "documentType": "PROJECT_DOC",
+      "projects": ["UBot-BE"],
+      "technologies": ["JUnit", "Mockito", "Testcontainers", "PostgreSQL"],
+      "tags": ["테스트", "mock", "통합테스트", "DB스키마", "CI"],
+      "sourceUri": "https://github.com/ureca-UBot/UBot-BE/blob/acbd2cc807c7181d5f77489a3cfc4d50c7ae0a06/docs/chat-mvp/README.md",
+      "content": "PR 문서는 채팅 MVP 테스트 48개가 저장소와 외부 서비스를 mock으로 검증한다고 명시한다. 기존 DB 통합 테스트는 Testcontainers를 사용하지만, 전체 테스트 통과가 신규 chat_sessions 및 answer_attempts_history 등의 실제 저장 동작이나 신규 컬럼 존재 여부를 검증하는 것은 아니라고 적혀 있다. 따라서 CI가 성공했다는 사실만으로 신규 Repository SQL과 실제 Flyway 적용 스키마의 호환성이 보장되지는 않는다. 신규 migration을 적용한 PostgreSQL 컨테이너에서 세션 생성, 질문 저장, 시도 생성과 상태 갱신을 직접 수행하는 통합 테스트가 별도로 필요하다."
     }
   ]
 }

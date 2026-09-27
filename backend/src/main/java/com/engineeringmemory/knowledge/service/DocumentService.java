@@ -31,11 +31,14 @@ import com.engineeringmemory.knowledge.dto.response.KnowledgeFacetsResponse;
 import com.engineeringmemory.knowledge.dto.response.KnowledgeFacetsResponse.DocumentTypeFacet;
 import com.engineeringmemory.knowledge.entity.Document;
 import com.engineeringmemory.knowledge.enums.DocumentType;
+import com.engineeringmemory.knowledge.enums.KnowledgeOwnership;
 import com.engineeringmemory.knowledge.repository.DocumentRepository;
 import com.engineeringmemory.knowledge.repository.DocumentListRepository;
 
 @Service
 public class DocumentService {
+
+	private static final String SHARED_MEDIA_TYPE = "text/plain;charset=UTF-8";
 
 	private final DocumentRepository documentRepository;
 	private final DocumentListRepository documentListRepository;
@@ -124,11 +127,11 @@ public class DocumentService {
 	}
 
 	@Transactional(readOnly = true)
-	public Page<DocumentSummaryResponse> list(long ownerId, String query,
+	public Page<DocumentSummaryResponse> list(long ownerId, KnowledgeOwnership ownership, String query,
 			List<DocumentType> documentTypes, List<String> projects, List<String> technologies,
 			List<String> tags, List<Document.IndexingStatus> indexingStatuses,
 			java.time.LocalDate from, java.time.LocalDate to, Pageable pageable) {
-		return documentListRepository.search(ownerId, query, documentTypes, projects,
+		return documentListRepository.search(ownerId, ownership, query, documentTypes, projects,
 				technologies, tags, indexingStatuses, from, to,
 				embeddingService.embeddingModel(), pageable);
 	}
@@ -136,7 +139,7 @@ public class DocumentService {
 	@Transactional(readOnly = true)
 	public DocumentDetailResponse detail(long ownerId, long documentId) {
 		return DocumentDetailResponse.from(
-				getOwned(ownerId, documentId), embeddingService.embeddingModel());
+				getReadable(ownerId, documentId), embeddingService.embeddingModel());
 	}
 
 	@Transactional
@@ -152,7 +155,7 @@ public class DocumentService {
 	@Transactional(readOnly = true)
 	public KnowledgeFacetsResponse facets(long ownerId) {
 		Map<DocumentType, Long> counts = new HashMap<>();
-		for (Object[] row : documentRepository.countDocumentTypes(ownerId)) {
+		for (Object[] row : documentRepository.countVisibleDocumentTypes(ownerId)) {
 			DocumentType type = row[0] instanceof DocumentType documentType
 					? documentType
 					: DocumentType.valueOf(row[0].toString());
@@ -163,14 +166,14 @@ public class DocumentService {
 				.toList();
 		return new KnowledgeFacetsResponse(
 				types,
-				documentRepository.findDistinctProjects(ownerId),
-				documentRepository.findDistinctTechnologies(ownerId),
-				documentRepository.findDistinctTags(ownerId));
+				documentRepository.findVisibleProjects(ownerId),
+				documentRepository.findVisibleTechnologies(ownerId),
+				documentRepository.findVisibleTags(ownerId));
 	}
 
 	@Transactional(readOnly = true)
 	public OriginalDocument original(long ownerId, long documentId) {
-		Document document = getOwned(ownerId, documentId);
+		Document document = getReadable(ownerId, documentId);
 		return new OriginalDocument(
 				document.getSourceName(), document.getMediaType(), document.copyOriginalContent());
 	}
@@ -212,9 +215,79 @@ public class DocumentService {
 		return detail(ownerId, document.getId());
 	}
 
+	public long createShared(DocumentCreateRequest request) {
+		SharedText text = sharedText(request);
+		Document document = documentRepository.saveAndFlush(Document.create(
+				null,
+				request.title().strip(),
+				request.documentType(),
+				normalizeLabels(request.projects()),
+				normalizeLabels(request.technologies()),
+				normalizeLabels(request.tags()),
+				textFilename(request.title()),
+				nullIfBlank(request.sourceUri()),
+				SHARED_MEDIA_TYPE,
+				request.occurredOn(),
+				text.content(),
+				text.original(),
+				text.contentHash()));
+		indexingService.requestIndex(null, document.getId());
+		return document.getId();
+	}
+
+	public void replaceShared(long documentId, DocumentCreateRequest request) {
+		Document document = documentRepository.findByIdAndOwnerIdIsNull(documentId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+		SharedText text = sharedText(request);
+		document.replaceText(
+				request.title().strip(), request.documentType(),
+				normalizeLabels(request.projects()), normalizeLabels(request.technologies()),
+				normalizeLabels(request.tags()), textFilename(request.title()), SHARED_MEDIA_TYPE,
+				nullIfBlank(request.sourceUri()), request.occurredOn(),
+				text.content(), text.original(), text.contentHash());
+		documentRepository.saveAndFlush(document);
+		indexingService.requestIndex(null, documentId);
+	}
+
+	@Transactional
+	public void deleteShared(long documentId) {
+		documentRepository.findByIdAndOwnerIdIsNull(documentId).ifPresent(documentRepository::delete);
+	}
+
+	public void reindexShared(long documentId) {
+		indexingService.requestIndex(null, documentId);
+	}
+
+	public boolean sharedMatches(Document document, DocumentCreateRequest request) {
+		return document.isShared()
+				&& document.getTitle().equals(request.title().strip())
+				&& document.getDocumentType() == request.documentType()
+				&& document.getProjects().equals(normalizeLabels(request.projects()))
+				&& document.getTechnologies().equals(normalizeLabels(request.technologies()))
+				&& document.getTags().equals(normalizeLabels(request.tags()))
+				&& java.util.Objects.equals(document.getOccurredOn(), request.occurredOn())
+				&& java.util.Objects.equals(document.getSourceUri(), nullIfBlank(request.sourceUri()))
+				&& document.getContent().equals(fileExtractor.validateText(request.content()));
+	}
+
+	private SharedText sharedText(DocumentCreateRequest request) {
+		String content = fileExtractor.validateText(request.content());
+		byte[] original = content.getBytes(StandardCharsets.UTF_8);
+		return new SharedText(content, original, sha256(original));
+	}
+
 	private Document getOwned(long ownerId, long documentId) {
 		return documentRepository.findByIdAndOwnerId(documentId, ownerId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+	}
+
+	private Document getReadable(long ownerId, long documentId) {
+		return documentRepository.findByIdAndOwnerId(documentId, ownerId)
+				.or(() -> documentRepository.findByIdAndOwnerIdIsNull(documentId))
+				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+	}
+
+	private record SharedText(String content, byte[] original, String contentHash) {
 	}
 
 	private static List<String> normalizeLabels(List<String> values) {

@@ -128,6 +128,11 @@
               <label class="sr-only" for="filter-q">제목과 내용 검색</label>
               <input class="input" id="filter-q" type="search" placeholder="제목과 내용 검색">
             </div>
+            <select class="select" id="filter-ownership" aria-label="자료 범위">
+              <option value="MINE">내 자료</option>
+              <option value="SHARED">공용 자료</option>
+              <option value="ALL">내 자료 + 공용</option>
+            </select>
             <select class="select" id="filter-type" aria-label="자료 유형"><option value="">모든 유형</option></select>
             <select class="select" id="filter-project" aria-label="프로젝트"><option value="">모든 프로젝트</option></select>
             <select class="select" id="filter-technology" aria-label="기술"><option value="">모든 기술</option></select>

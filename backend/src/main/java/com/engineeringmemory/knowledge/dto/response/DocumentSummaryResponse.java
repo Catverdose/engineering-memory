@@ -23,6 +23,7 @@ public record DocumentSummaryResponse(
 		String embeddingModel,
 		IndexingStatus indexingStatus,
 		boolean needsReindex,
+		boolean shared,
 		OffsetDateTime createdAt,
 		OffsetDateTime updatedAt) {
 
@@ -43,6 +44,7 @@ public record DocumentSummaryResponse(
 				document.getIndexingStatus(),
 				document.getIndexingStatus() != IndexingStatus.READY
 						|| !java.util.Objects.equals(document.getEmbeddingModel(), currentEmbeddingModel),
+				document.isShared(),
 				document.getCreatedAt(),
 				document.getUpdatedAt());
 	}

@@ -20,7 +20,8 @@ import com.engineeringmemory.knowledge.repository.DocumentChunkVectorRepository;
 import com.engineeringmemory.traffic.config.RateLimitProperties;
 
 @Tag("integration")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		properties = "knowledge.seed.enabled=false")
 class ApplicationContextIntegrationTest {
 
 	@Autowired

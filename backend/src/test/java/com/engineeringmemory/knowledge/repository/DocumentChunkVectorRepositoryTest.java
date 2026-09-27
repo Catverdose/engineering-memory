@@ -14,15 +14,22 @@ import tools.jackson.databind.ObjectMapper;
 class DocumentChunkVectorRepositoryTest {
 
 	@Test
-	@DisplayName("벡터 후보를 정렬하거나 제한하기 전에 청크와 문서 owner를 모두 고정한다")
+	@DisplayName("벡터 후보를 정렬하거나 제한하기 전에 내 청크와 공용 청크로만 좁힌다")
 	void ownerBoundaryIsInsideBaseSearchQuery() {
 		String sql = DocumentChunkVectorRepository.BASE_SEARCH_SQL;
 
 		assertThat(sql).contains(
-				"WHERE c.owner_id = :ownerId",
-				"AND d.owner_id = :ownerId",
+				"WHERE (c.owner_id = :ownerId OR c.owner_id IS NULL)",
 				"AND c.embedding_model = :embeddingModel");
 		assertThat(sql).doesNotContain("ORDER BY", "LIMIT");
+	}
+
+	@Test
+	@DisplayName("청크와 문서의 owner가 다르면 결합하지 않는다. 공용 청크가 개인 문서를 가리켜도 검색되지 않는다")
+	void chunkOwnerMustMatchDocumentOwnerIncludingNull() {
+		assertThat(DocumentChunkVectorRepository.BASE_SEARCH_SQL)
+				.contains("d.owner_id IS NOT DISTINCT FROM c.owner_id")
+				.contains("d.owner_id IS NULL AS shared");
 	}
 
 	@Test

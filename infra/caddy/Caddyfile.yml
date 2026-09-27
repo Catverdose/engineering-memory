@@ -1,2 +1,0 @@
-catverdose.xyz {
-    reverse_proxy nginx:80}

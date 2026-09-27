@@ -25,6 +25,7 @@ public record DocumentDetailResponse(
 		String embeddingModel,
 		IndexingStatus indexingStatus,
 		boolean needsReindex,
+		boolean shared,
 		OffsetDateTime createdAt,
 		OffsetDateTime updatedAt) {
 
@@ -47,6 +48,7 @@ public record DocumentDetailResponse(
 				document.getIndexingStatus(),
 				document.getIndexingStatus() != IndexingStatus.READY
 						|| !java.util.Objects.equals(document.getEmbeddingModel(), currentEmbeddingModel),
+				document.isShared(),
 				document.getCreatedAt(),
 				document.getUpdatedAt());
 	}

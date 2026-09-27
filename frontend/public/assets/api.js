@@ -181,6 +181,7 @@ export const knowledge = {
     appendAll(query, 'indexingStatus', filters.indexingStatuses ?? filters.indexingStatus);
     setIfPresent(query, 'from', filters.from);
     setIfPresent(query, 'to', filters.to);
+    setIfPresent(query, 'ownership', filters.ownership);
     query.set('page', String(filters.page ?? 0));
     query.set('size', String(filters.size ?? 20));
     query.set('sort', filters.sort ?? 'updatedAt,desc');

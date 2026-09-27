@@ -96,6 +96,10 @@ knowledge:
     embedding-batch-size: 32
     max-concurrent-indexing: 2
 
+  seed:
+    enabled: true
+    retry-delay: 30s
+
 chat:
   stream:
     timeout: 300s

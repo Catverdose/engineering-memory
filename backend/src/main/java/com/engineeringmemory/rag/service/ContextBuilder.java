@@ -24,13 +24,18 @@ public class ContextBuilder {
 	private static final int MIN_KNOWLEDGE_CONTENT_CHARS = 32;
 
 	private static final String SYSTEM_HEADER = "[System]\n";
-	private static final String KNOWLEDGE_HEADER = "[Personal Knowledge]\n";
+	private static final String KNOWLEDGE_HEADER = "[Knowledge]\n";
 	private static final String HISTORY_HEADER = "\n[Recent Conversation]\n";
 	private static final String QUESTION_HEADER = "\n[User Question]\n";
 
+	static final String PERSONAL_LABEL = "개인 기록";
+	static final String SHARED_LABEL = "공용 자료";
+
 	public static final String SYSTEM_PROMPT = """
 			당신은 사용자의 개인 개발 기록을 다시 찾고 연결하는 Personal Engineering Assistant입니다.
-			아래 [Personal Knowledge]에 포함된 내용만 사용자의 과거 경험과 결정으로 말하세요.
+			아래 [Knowledge]의 근거는 (개인 기록)과 (공용 자료)로 표시됩니다.
+			(개인 기록)만 사용자의 과거 경험과 결정으로 말하세요.
+			(공용 자료)는 일반 기술 지식이므로 사용자가 겪거나 결정한 일처럼 말하지 말고 일반적인 설명으로 전하세요.
 			자료에 없는 내용을 사용자가 실제로 겪었거나 결정한 것처럼 추측하지 마세요.
 			근거가 서로 다르면 차이를 숨기지 말고 문서와 시점을 구분하세요.
 			질문에 직접 답하고, 원인·해결 방법·선택 이유가 근거에 있으면 함께 정리하세요.
@@ -88,7 +93,8 @@ public class ContextBuilder {
 				continue;
 			}
 			String citation = truncate(hit.citation(), MAX_CITATION_CHARS);
-			String prefix = "Source " + (included.size() + 1) + ": " + citation + '\n';
+			String label = hit.shared() ? SHARED_LABEL : PERSONAL_LABEL;
+			String prefix = "Source " + (included.size() + 1) + " (" + label + "): " + citation + '\n';
 			String content = hit.content().strip();
 			int contentBudget = budget - text.length() - prefix.length() - 2;
 			if (contentBudget < MIN_KNOWLEDGE_CONTENT_CHARS) {

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import com.engineeringmemory.knowledge.dto.response.DocumentSummaryResponse;
 import com.engineeringmemory.knowledge.entity.Document.IndexingStatus;
 import com.engineeringmemory.knowledge.enums.DocumentType;
+import com.engineeringmemory.knowledge.enums.KnowledgeOwnership;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -26,9 +27,9 @@ public class DocumentListRepository {
 			d.technologies::text AS technologies,
 			d.tags::text AS tags,
 			d.source_name, d.media_type, d.occurred_on,
-			d.version, d.embedding_model, d.indexing_status, d.created_at, d.updated_at
+			d.version, d.embedding_model, d.indexing_status, d.owner_id IS NULL AS shared,
+			d.created_at, d.updated_at
 			""";
-	static final String BASE_FROM_WHERE = " FROM document d WHERE d.owner_id = :ownerId\n";
 
 	private final NamedParameterJdbcTemplate jdbc;
 	private final ObjectMapper objectMapper;
@@ -38,11 +39,12 @@ public class DocumentListRepository {
 		this.objectMapper = objectMapper;
 	}
 
-	public Page<DocumentSummaryResponse> search(long ownerId, String query,
+	public Page<DocumentSummaryResponse> search(long ownerId, KnowledgeOwnership ownership, String query,
 			List<DocumentType> documentTypes, List<String> projects, List<String> technologies,
 			List<String> tags, List<IndexingStatus> indexingStatuses,
 			LocalDate from, LocalDate to, String currentEmbeddingModel, Pageable pageable) {
-		StringBuilder fromWhere = new StringBuilder(BASE_FROM_WHERE);
+		KnowledgeOwnership scope = ownership == null ? KnowledgeOwnership.MINE : ownership;
+		StringBuilder fromWhere = new StringBuilder(scope.fromWhere());
 		MapSqlParameterSource params = new MapSqlParameterSource("ownerId", ownerId);
 
 		String normalizedQuery = nullIfBlank(query);
@@ -96,6 +98,7 @@ public class DocumentListRepository {
 					IndexingStatus.valueOf(rs.getString("indexing_status")),
 					!"READY".equals(rs.getString("indexing_status"))
 							|| !java.util.Objects.equals(rs.getString("embedding_model"), currentEmbeddingModel),
+					rs.getBoolean("shared"),
 					rs.getObject("created_at", java.time.OffsetDateTime.class),
 					rs.getObject("updated_at", java.time.OffsetDateTime.class));
 		});

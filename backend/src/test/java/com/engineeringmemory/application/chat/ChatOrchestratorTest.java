@@ -244,7 +244,7 @@ class ChatOrchestratorTest {
 	private static ChunkHit chunk(long chunkId, long documentId, String title) {
 		return new ChunkHit(chunkId, documentId, title, DocumentType.TROUBLESHOOTING,
 				List.of("ubot"), List.of("nginx"), List.of(),
-				LocalDate.of(2026, 1, 1), 0, "heading", "본문", 0.81);
+				LocalDate.of(2026, 1, 1), 0, "heading", "본문", 0.81, false);
 	}
 
 	private static final class RecordingSink implements AnswerSink {

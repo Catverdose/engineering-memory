@@ -313,6 +313,7 @@ func TestSlowPaths_UseLongerTimeout(t *testing.T) {
 	for _, path := range []string{
 		"/api/chat/messages",
 		"/api/knowledge/documents",
+		"/api/knowledge/documents/upload",
 		"/api/knowledge/documents/42/reindex",
 	} {
 		if got := post(path); got != http.StatusOK {

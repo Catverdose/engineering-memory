@@ -24,7 +24,8 @@ import com.engineeringmemory.knowledge.dto.SearchScope;
 import com.engineeringmemory.knowledge.enums.DocumentType;
 
 @Tag("integration")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		properties = "knowledge.seed.enabled=false")
 @Transactional
 class DocumentChunkVectorRepositoryIsolationTest {
 
@@ -61,7 +62,7 @@ class DocumentChunkVectorRepositoryIsolationTest {
 	@Test
 	@DisplayName("가장 가까운 이웃이 남의 자료여도 검색 결과에 섞이지 않는다")
 	void searchNeverCrossesOwnerBoundary() {
-		List<ChunkHit> hits = repository.search(ownerA, query, MODEL, SearchScope.all(), 10);
+		List<ChunkHit> hits = personal(repository.search(ownerA, query, MODEL, SearchScope.all(), 10));
 
 		assertThat(hits)
 				.as("A 의 청크는 나와야 한다")
@@ -72,7 +73,7 @@ class DocumentChunkVectorRepositoryIsolationTest {
 				.as("B 의 문서가 어떤 형태로든 섞이면 안 된다")
 				.noneMatch(hit -> hit.documentId() == documentB);
 
-		List<ChunkHit> asOwnerB = repository.search(ownerB, query, MODEL, SearchScope.all(), 10);
+		List<ChunkHit> asOwnerB = personal(repository.search(ownerB, query, MODEL, SearchScope.all(), 10));
 		assertThat(asOwnerB).extracting(ChunkHit::chunkId).containsExactly(chunkB);
 		assertThat(asOwnerB.get(0).similarity())
 				.as("B 가 A 보다 가까워야 이 테스트가 의미를 갖는다")
@@ -85,16 +86,16 @@ class DocumentChunkVectorRepositoryIsolationTest {
 		SearchScope othersProject = new SearchScope(
 				List.of("petcoupon"), List.of(), Set.of(), null, null);
 
-		assertThat(repository.search(ownerA, query, MODEL, othersProject, 10))
+		assertThat(personal(repository.search(ownerA, query, MODEL, othersProject, 10)))
 				.as("범위는 좁히는 장치다. 넓히는 데 쓰일 수 없어야 한다")
 				.isEmpty();
 
 		SearchScope sharedTech = new SearchScope(
 				List.of(), List.of("nginx"), Set.of(DocumentType.TROUBLESHOOTING), null, null);
 
-		assertThat(repository.search(ownerA, query, MODEL, sharedTech, 10))
+		assertThat(personal(repository.search(ownerA, query, MODEL, sharedTech, 10)))
 				.extracting(ChunkHit::chunkId).containsExactly(chunkA);
-		assertThat(repository.search(ownerB, query, MODEL, sharedTech, 10))
+		assertThat(personal(repository.search(ownerB, query, MODEL, sharedTech, 10)))
 				.extracting(ChunkHit::chunkId).containsExactly(chunkB);
 	}
 
@@ -122,6 +123,35 @@ class DocumentChunkVectorRepositoryIsolationTest {
 				.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
+	@Test
+	@DisplayName("공용 문서는 모든 사용자에게 검색되고 공용으로 표시된다")
+	void sharedDocumentIsVisibleToEveryOwner() {
+		long shared = insertDocument(null, "공용 Nginx 문서", "[]", "[\"nginx\"]");
+		long sharedChunk = insertChunk(shared, null, mix(0.5f, 0.5f));
+
+		for (long owner : new long[] { ownerA, ownerB }) {
+			assertThat(repository.search(owner, query, MODEL, SearchScope.all(), 50))
+					.filteredOn(hit -> hit.chunkId() == sharedChunk)
+					.singleElement()
+					.satisfies(hit -> assertThat(hit.shared()).isTrue());
+		}
+	}
+
+	@Test
+	@DisplayName("owner 없는 청크가 개인 문서를 가리켜도 공용으로 새지 않는다")
+	void ownerlessChunkOfPrivateDocumentIsNeverReturned() {
+		long leaked = insertChunk(documentA, null, axis(0), 1);
+
+		assertThat(repository.search(ownerB, query, MODEL, SearchScope.all(), 50))
+				.noneMatch(hit -> hit.chunkId() == leaked);
+		assertThat(repository.search(ownerA, query, MODEL, SearchScope.all(), 50))
+				.noneMatch(hit -> hit.chunkId() == leaked);
+	}
+
+	private static List<ChunkHit> personal(List<ChunkHit> hits) {
+		return hits.stream().filter(hit -> !hit.shared()).toList();
+	}
+
 	private long insertUser(String username) {
 		return jdbc.queryForObject("""
 				INSERT INTO app_user (username, password_hash, role, status)
@@ -130,12 +160,12 @@ class DocumentChunkVectorRepositoryIsolationTest {
 				""", Long.class, username + "-" + System.nanoTime());
 	}
 
-	private long insertDocument(long ownerId, String title, String projects, String technologies) {
+	private long insertDocument(Long ownerId, String title, String projects, String technologies) {
 		return jdbc.queryForObject("""
 				INSERT INTO document (owner_id, title, document_type, projects, technologies, tags,
 				                      source_name, media_type, original_content, occurred_on,
 				                      content, content_hash, version, indexing_status)
-				VALUES (?, ?, 'TROUBLESHOOTING', ?::jsonb, ?::jsonb, '[]'::jsonb,
+				VALUES (CAST(? AS bigint), ?, 'TROUBLESHOOTING', ?::jsonb, ?::jsonb, '[]'::jsonb,
 				        'note.md', 'text/markdown', ?, ?,
 				        ?, ?, 1, 'READY')
 				RETURNING id
@@ -145,15 +175,19 @@ class DocumentChunkVectorRepositoryIsolationTest {
 				title, Long.toHexString(System.nanoTime()) + ownerId);
 	}
 
-	private long insertChunk(long documentId, long ownerId, float[] embedding) {
+	private long insertChunk(long documentId, Long ownerId, float[] embedding) {
+		return insertChunk(documentId, ownerId, embedding, 0);
+	}
+
+	private long insertChunk(long documentId, Long ownerId, float[] embedding, int chunkIndex) {
 		return jdbc.queryForObject("""
 				INSERT INTO document_chunk (document_id, owner_id, document_version, chunk_index,
 				                            heading, content, char_count, embedding, embedding_model)
-				VALUES (?, ?, 1, 0, 'buffering', 'proxy_buffering off 로 해결했다', 24,
+				VALUES (?, CAST(? AS bigint), 1, ?, 'buffering', 'proxy_buffering off 로 해결했다', 24,
 				        CAST(? AS vector), ?)
 				RETURNING id
 				""", Long.class,
-				documentId, ownerId, literal(embedding), MODEL);
+				documentId, ownerId, chunkIndex, literal(embedding), MODEL);
 	}
 
 	private static float[] axis(int index) {

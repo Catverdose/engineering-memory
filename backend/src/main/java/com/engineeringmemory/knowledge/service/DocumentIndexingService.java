@@ -82,7 +82,7 @@ public class DocumentIndexingService {
 				executor.getMaximumPoolSize() + executor.getQueue().remainingCapacity());
 	}
 
-	public void requestIndex(long ownerId, long documentId) {
+	public void requestIndex(Long ownerId, long documentId) {
 		writer.requestIndexing(ownerId, documentId);
 		enqueue(new DocumentKey(ownerId, documentId), true);
 	}
@@ -277,7 +277,7 @@ public class DocumentIndexingService {
 		return text.append("본문:\n").append(draft.content()).toString();
 	}
 
-	private record DocumentKey(long ownerId, long documentId) {
+	private record DocumentKey(Long ownerId, long documentId) {
 	}
 
 	private static final class WorkState {

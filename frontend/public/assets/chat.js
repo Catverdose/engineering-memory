@@ -371,6 +371,7 @@ function renderSources(sources) {
     }
     list.append(el('article', { class: 'source' }, [
       el('div', { class: 'source__head' }, [
+        source.shared ? el('span', { class: 'badge badge--shared', text: '공용', title: '모든 사용자가 보는 기본 지식' }) : null,
         el('span', { class: 'badge', text: type }),
         el('a', {
           class: 'source__title',

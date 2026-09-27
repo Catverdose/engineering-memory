@@ -1,6 +1,6 @@
 # Roadmap
 
-표시: ✅ 완료 · `일부` 부분 구현. 기준일 2026-09-23.
+표시: ✅ 완료 · `일부` 부분 구현. 기준일 2026-09-28.
 
 ## Phase 1 — Private Knowledge Assistant MVP ✅
 
@@ -13,8 +13,16 @@
 * ✅ 단일 사용자 로그인 및 Private Knowledge Base
 * ✅ Docker Compose 기반 단일 서버 배포
 
-## Phase 2 — Knowledge Ingestion & Retrieval
+## Phase 2 — Knowledge Ingestion & Retrieval (진행 중)
 
+세부 계획과 순서는 [phase2-plan.md](phase2-plan.md).
+
+* 초기 Knowledge 확보 — `일부` 공용 기본 지식 336건 자동 등록, 개인 초기 자료 62건 ([seed/README.md](../seed/README.md))
+* ✅ 개인 기록과 공용 자료(Reference Knowledge) 분리 — 저장·검색·프롬프트 표시
+* Retrieval 평가 세트와 설정 비교 (Chunk, Threshold, Top-K, Embedding Model)
+* Knowledge Category와 Category별 입력 템플릿
+* Chat Search Scope 확장 (AUTO, 결과 부족 시 범위 확장)
+* 답변 Markdown 표시 방식, PDF 추출 품질
 * ✅ 문서 수정 / 삭제 / 재색인
 * Metadata 자동 추출 및 분류 보조
 * 중복 문서 및 Chunk 관리 — `일부` 같은 원본 중복 등록 차단
@@ -27,6 +35,8 @@
 ## Phase 3 — AI Serving & Streaming
 
 * AI Profile / AiConfig 관리
+* GENERAL / HARD 생성 모델 라우팅 (설계는 Phase 2)
+* `EmbeddingProfile`과 임베딩 모델 교체·재색인 전략
 * ✅ Chat / Embedding 모델 설정 분리
 * Ollama / vLLM 지원 — `일부` Ollama
 * 모델별 생성 옵션 및 동시성 설정 — `일부` 전역 생성 옵션, 채팅 동시성 상한
@@ -52,7 +62,7 @@
 * 사용자별 AI Profile / Rate Limit / Storage 관리
 * ✅ Conversation / ChatMessage 기반 멀티턴 대화
 * 대화 Context / Query Rewrite / Conversation Summary — `일부` 최근 대화 8건 Context
-* Private by Default 기반 선택적 공유
+* Private by Default 기반 선택적 공유 — `일부` owner 없는 공용 자료는 모든 사용자가 읽기 가능 (서버 관리)
 * `PRIVATE / SHARED / PUBLIC` 접근 정책 확장
 
 ## Core Direction

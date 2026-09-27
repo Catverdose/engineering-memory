@@ -29,7 +29,8 @@ const dom = {
   technologyOptions: $('technology-options'), tagOptions: $('tag-options'),
   filterForm: $('filter-form'), filterQ: $('filter-q'), filterType: $('filter-type'),
   filterProject: $('filter-project'), filterTechnology: $('filter-technology'),
-  filterStatus: $('filter-status'), clearFilters: $('clear-filters'), refresh: $('refresh-documents'),
+  filterStatus: $('filter-status'), filterOwnership: $('filter-ownership'),
+  clearFilters: $('clear-filters'), refresh: $('refresh-documents'),
   list: $('document-list'), empty: $('document-empty'), emptyCreate: $('empty-create'),
   total: $('document-total'), pager: $('document-pager'), detail: $('detail-panel'),
   detailTitle: $('detail-title'), detailMeta: $('detail-meta'), detailContent: $('detail-content'),
@@ -273,6 +274,7 @@ function currentFilters(page = currentPage) {
     project: dom.filterProject.value,
     technology: dom.filterTechnology.value,
     indexingStatus: dom.filterStatus.value,
+    ownership: dom.filterOwnership.value,
     page,
     size: 20,
   };
@@ -318,18 +320,21 @@ function renderDocuments(items) {
     const detailButton = el('button', { type: 'button', class: 'btn btn-ghost-sm', text: '보기' });
     detailButton.addEventListener('click', () => showDetail(document.id));
     actions.append(detailButton);
-    if (needsReindex) {
+    if (needsReindex && !document.shared) {
       const reindexButton = el('button', { type: 'button', class: 'btn btn-ghost-sm', text: '재색인' });
       reindexButton.addEventListener('click', () => reindexDocument(document.id, reindexButton));
       actions.append(reindexButton);
     }
-    const deleteButton = el('button', { type: 'button', class: 'btn btn-danger-sm', text: '삭제' });
-    deleteButton.addEventListener('click', () => deleteDocument(document));
-    actions.append(deleteButton);
+    if (!document.shared) {
+      const deleteButton = el('button', { type: 'button', class: 'btn btn-danger-sm', text: '삭제' });
+      deleteButton.addEventListener('click', () => deleteDocument(document));
+      actions.append(deleteButton);
+    }
 
     dom.list.append(el('article', { class: 'document-card' }, [
       el('div', { class: 'document-card__main' }, [
         el('div', { class: 'document-card__title-row' }, [
+          document.shared ? el('span', { class: 'badge badge--shared', text: '공용', title: '모든 사용자가 보는 기본 지식' }) : null,
           el('span', { class: 'badge', text: type }),
           el('button', { type: 'button', class: 'document-card__title', text: document.title ?? '제목 없는 문서', 'data-id': document.id }),
         ]),
@@ -386,6 +391,7 @@ async function showDetail(id) {
     dom.detailTitle.textContent = document.title ?? '제목 없는 문서';
     dom.detailMeta.replaceChildren();
     const values = [
+      document.shared ? '공용 자료 · 읽기 전용' : null,
       document.documentTypeLabel ?? document.documentType,
       ...(document.projects ?? []),
       ...(document.technologies ?? []),
@@ -407,12 +413,14 @@ async function showDetail(id) {
         class: 'btn btn-ghost-sm', href: sourceUrl, target: '_blank', rel: 'noopener noreferrer', text: '원본 위치 열기',
       }));
     }
-    const edit = el('button', { type: 'button', class: 'btn btn-primary-sm', text: '수정' });
-    edit.addEventListener('click', () => editDocument(document));
-    dom.detailActions.append(edit);
-    const reindex = el('button', { type: 'button', class: 'btn btn-ghost-sm', text: '재색인' });
-    reindex.addEventListener('click', () => reindexDocument(document.id, reindex));
-    dom.detailActions.append(reindex);
+    if (!document.shared) {
+      const edit = el('button', { type: 'button', class: 'btn btn-primary-sm', text: '수정' });
+      edit.addEventListener('click', () => editDocument(document));
+      dom.detailActions.append(edit);
+      const reindex = el('button', { type: 'button', class: 'btn btn-ghost-sm', text: '재색인' });
+      reindex.addEventListener('click', () => reindexDocument(document.id, reindex));
+      dom.detailActions.append(reindex);
+    }
     dom.detail.classList.remove('hidden');
     dom.detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const url = new URL(location.href);

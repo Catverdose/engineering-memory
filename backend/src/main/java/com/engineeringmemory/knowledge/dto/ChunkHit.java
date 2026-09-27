@@ -17,7 +17,8 @@ public record ChunkHit(
 		int chunkIndex,
 		String heading,
 		String content,
-		double similarity) {
+		double similarity,
+		boolean shared) {
 
 	public ChunkHit {
 		projects = projects == null ? List.of() : List.copyOf(projects);

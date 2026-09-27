@@ -170,6 +170,25 @@ class DocumentIndexingServiceTest {
 	}
 
 	@Test
+	@DisplayName("공용 문서는 owner 없이 같은 색인 경로를 탄다")
+	void indexesSharedDocumentWithoutOwner() throws Exception {
+		service = newService(2);
+		stubSingleChunk();
+		when(writer.prepare(null, 200L)).thenReturn(source(null, 200L, 1));
+		CountDownLatch completed = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			completed.countDown();
+			return null;
+		}).when(writer).replaceAndMarkReady(any(), anyList(), eq("test-model"));
+
+		service.requestIndex(null, 200L);
+
+		assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
+		verify(writer).requestIndexing(null, 200L);
+		verify(writer).prepare(null, 200L);
+	}
+
+	@Test
 	@DisplayName("채팅이 진행 중이면 색인이 임베딩을 부르지 않고 기다린다")
 	void indexingStepsAsideWhileSomeoneIsChatting() throws Exception {
 		ModelWorkloadGate gate = new ModelWorkloadGate(
@@ -222,7 +241,7 @@ class DocumentIndexingServiceTest {
 				.thenReturn(List.<float[]>of(new float[] { 1.0f }));
 	}
 
-	private static IndexSource source(long ownerId, long documentId, int version) {
+	private static IndexSource source(Long ownerId, long documentId, int version) {
 		return new IndexSource(
 				documentId,
 				ownerId,

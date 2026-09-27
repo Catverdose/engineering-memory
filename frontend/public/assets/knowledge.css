@@ -127,7 +127,7 @@
 
 .knowledge-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(130px, 1fr)) auto auto;
+  grid-template-columns: minmax(220px, 2fr) repeat(5, minmax(120px, 1fr)) auto auto;
   gap: var(--s-xs);
   align-items: end;
 }

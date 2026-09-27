@@ -34,7 +34,7 @@ class DocumentControllerTest {
 	private final DocumentDetailResponse pending = new DocumentDetailResponse(
 			101L, "title", DocumentType.NOTE, "개발·학습 노트", List.of(), List.of(), List.of(),
 			"title.txt", null, "text/plain;charset=UTF-8", null, "content", 1, null,
-			IndexingStatus.PENDING, true, null, null);
+			IndexingStatus.PENDING, true, false, null, null);
 
 	@BeforeEach
 	void authenticate() {

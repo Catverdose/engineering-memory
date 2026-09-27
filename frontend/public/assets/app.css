@@ -443,6 +443,12 @@ a:hover {
   background: var(--c-error-soft);
 }
 
+.badge--shared {
+  color: var(--c-violet);
+  border-color: var(--c-violet-soft);
+  background: var(--c-elevated);
+}
+
 .notice {
   display: flex;
   align-items: flex-start;

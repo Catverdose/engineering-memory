@@ -44,6 +44,6 @@ class RetrievalServiceTest {
 	private static ChunkHit hit(long chunkId, long documentId, double similarity, String content) {
 		return new ChunkHit(chunkId, documentId, "문서", DocumentType.NOTE,
 				List.of("project"), List.of("java"), List.of(), null,
-				0, null, content, similarity);
+				0, null, content, similarity, false);
 	}
 }

@@ -232,6 +232,52 @@ class DocumentServiceTest {
 		verify(fixture.indexing).requestIndex(OWNER, 11L);
 	}
 
+	@Test
+	@DisplayName("공용 문서는 누구나 상세와 원본을 볼 수 있다")
+	void sharedDocumentIsReadable() {
+		Fixture fixture = new Fixture();
+		Document shared = fixture.sharedDocument(50L);
+
+		assertThat(fixture.service.detail(OWNER, 50L).shared()).isTrue();
+		assertThat(fixture.service.original(OWNER, 50L).content()).isEqualTo(shared.copyOriginalContent());
+	}
+
+	@Test
+	@DisplayName("공용 문서는 읽기 전용이다. 사용자가 수정·삭제하면 없는 것처럼 답한다")
+	void sharedDocumentIsReadOnlyForUsers() {
+		Fixture fixture = new Fixture();
+		fixture.sharedDocument(50L);
+
+		for (Runnable call : List.<Runnable>of(
+				() -> fixture.service.delete(OWNER, 50L),
+				() -> fixture.service.updateMetadata(OWNER, 50L, metadata("제목")),
+				() -> fixture.service.updateText(OWNER, 50L, request("제목", List.of(), List.of(), List.of())))) {
+			assertThatThrownBy(call::run)
+					.isInstanceOfSatisfying(BusinessException.class,
+							e -> assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND));
+		}
+		verify(fixture.documents, never()).delete(any());
+		verify(fixture.documents, never()).saveAndFlush(any());
+	}
+
+	@Test
+	@DisplayName("공용 문서는 owner 없이 저장하고 owner 없이 색인을 요청한다")
+	void createsSharedDocumentWithoutOwner() {
+		Fixture fixture = new Fixture();
+		when(fixture.documents.saveAndFlush(any())).thenAnswer(invocation -> {
+			Document document = invocation.getArgument(0);
+			return Fixture.withId(document, 77L);
+		});
+
+		long id = fixture.service.createShared(request("공용 자료", List.of(), List.of("HTTP"), List.of("일반정보")));
+
+		assertThat(id).isEqualTo(77L);
+		Document saved = fixture.savedDocument();
+		assertThat(saved.getOwnerId()).isNull();
+		assertThat(saved.isShared()).isTrue();
+		verify(fixture.indexing).requestIndex(null, 77L);
+	}
+
 	private static DocumentCreateRequest request(
 			String title, List<String> projects, List<String> technologies, List<String> tags) {
 		return new DocumentCreateRequest(title, DocumentType.TROUBLESHOOTING,
@@ -277,6 +323,15 @@ class DocumentServiceTest {
 					LocalDate.of(2026, 1, 1), "본문", "본문".getBytes(StandardCharsets.UTF_8), "hash"), id);
 			when(documents.findByIdAndOwnerId(id, OWNER)).thenReturn(Optional.of(document));
 			when(documents.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+			return document;
+		}
+
+		Document sharedDocument(long id) {
+			Document document = withId(Document.create(null, "공용 자료", DocumentType.TECH_DOC,
+					List.of(), List.of("HTTP"), List.of("일반정보"), "shared.txt", "https://example.com",
+					"text/plain;charset=UTF-8", null, "본문", "본문".getBytes(StandardCharsets.UTF_8), "shared-hash"), id);
+			when(documents.findByIdAndOwnerId(id, OWNER)).thenReturn(Optional.empty());
+			when(documents.findByIdAndOwnerIdIsNull(id)).thenReturn(Optional.of(document));
 			return document;
 		}
 
